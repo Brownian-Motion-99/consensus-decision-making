@@ -12,13 +12,17 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
 const HEARTBEAT_MS = 10_000;
 
-// 只提供這幾個檔案，避免路徑穿越
+// 只提供這幾個檔案，避免路徑穿越。路徑相對於專案根目錄
 const STATIC_FILES = {
-  '/': ['index.html', 'text/html; charset=utf-8'],
-  '/index.html': ['index.html', 'text/html; charset=utf-8'],
-  '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
-  '/board.js': ['board.js', 'text/javascript; charset=utf-8'],
-  '/style.css': ['style.css', 'text/css; charset=utf-8'],
+  '/': ['public/index.html', 'text/html; charset=utf-8'],
+  '/index.html': ['public/index.html', 'text/html; charset=utf-8'],
+  '/app.js': ['public/app.js', 'text/javascript; charset=utf-8'],
+  '/board.js': ['public/board.js', 'text/javascript; charset=utf-8'],
+  '/sounds.js': ['public/sounds.js', 'text/javascript; charset=utf-8'],
+  '/style.css': ['public/style.css', 'text/css; charset=utf-8'],
+  '/audio/correct.mp3': ['audio/correct.mp3', 'audio/mpeg'],
+  '/audio/wrong.mp3': ['audio/wrong.mp3', 'audio/mpeg'],
+  '/audio/congrats.mp3': ['audio/congrats.mp3', 'audio/mpeg'],
 };
 
 /** 找出本機的區網 IPv4，優先選常見的私有網段。 */
@@ -48,7 +52,7 @@ const http = createServer(async (req, res) => {
     return;
   }
   try {
-    const body = await readFile(join(ROOT, 'public', entry[0]));
+    const body = await readFile(join(ROOT, entry[0]));
     res.writeHead(200, { 'Content-Type': entry[1], 'Cache-Control': 'no-cache' });
     res.end(body);
   } catch {

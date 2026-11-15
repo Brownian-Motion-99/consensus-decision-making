@@ -2,6 +2,7 @@
 // 所有使用者輸入的文字都用 textContent 放進畫面，不用 innerHTML。
 
 import { createBoard } from './board.js';
+import { loadSounds, playSound, stopSound } from './sounds.js';
 
 const $ = (id) => document.getElementById(id);
 const board = createBoard($('board'), {
@@ -23,8 +24,10 @@ function connect() {
       $('qr').src = msg.qrDataUrl;
       $('join-url').textContent = msg.joinUrl;
     } else if (msg.type === 'state') {
+      const prev = state;
       state = msg.state;
       render();
+      playTransitionSound(prev, state);
     } else if (msg.type === 'error' || msg.type === 'notice') {
       showNotice(msg.message, msg.type === 'error');
     }
@@ -109,6 +112,14 @@ function renderAnswers(listEl, answers) {
 
 function progressText(q) {
   return `第 ${q.number} 題｜目標：一致 ${state.targetMatches} 次`;
+}
+
+// 只在狀態「切換」的那一刻播放，剛連上線或其他更新不會重播
+function playTransitionSound(prev, next) {
+  if (!prev || !next.you.joined || prev.phase === next.phase) return;
+  if (next.phase === 'judged') playSound(next.lastMatch ? 'correct' : 'wrong');
+  else if (next.phase === 'finished' && next.targetReached) playSound('congrats');
+  else if (prev.phase === 'finished') stopSound('congrats'); // 回到大廳就中斷
 }
 
 // ---- 各畫面 ----
@@ -271,4 +282,9 @@ for (const type of ['gesturestart', 'gesturechange']) {
   });
 }
 
+loadSounds({
+  correct: '/audio/correct.mp3',
+  wrong: '/audio/wrong.mp3',
+  congrats: '/audio/congrats.mp3',
+});
 connect();
