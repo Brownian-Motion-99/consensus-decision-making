@@ -1,0 +1,70 @@
+/* 預覽總覽頁的樣式（開發工具，不影響遊戲畫面） */
+:root {
+  --bg: #ececec;
+  --surface: #ffffff;
+  --text: #222222;
+  --muted: #6b6b6b;
+  --border: #d0d0d0;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111113;
+    --surface: #1f1f23;
+    --text: #eeeeee;
+    --muted: #a0a0a0;
+    --border: #3a3a40;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "PingFang TC", "Noto Sans TC", sans-serif;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  margin-bottom: 16px;
+}
+h1 { margin: 0; font-size: 1.25rem; }
+nav a { color: var(--muted); }
+label { color: var(--muted); font-size: 0.9rem; }
+select {
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.hint { color: var(--muted); font-size: 0.85rem; margin: 0; }
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+figure { margin: 0; }
+figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+figcaption a { color: var(--muted); }
+.frame {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.frame iframe {
+  display: block;
+  border: 0;
+  transform-origin: 0 0;
+}

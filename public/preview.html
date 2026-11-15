@@ -3,84 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>畫面預覽總覽</title>
-  <style>
-    :root {
-      --bg: #ececec;
-      --surface: #ffffff;
-      --text: #222222;
-      --muted: #6b6b6b;
-      --border: #d0d0d0;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #111113;
-        --surface: #1f1f23;
-        --text: #eeeeee;
-        --muted: #a0a0a0;
-        --border: #3a3a40;
-      }
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 16px;
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, "PingFang TC", "Noto Sans TC", sans-serif;
-    }
-    header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 12px 24px;
-      margin-bottom: 16px;
-    }
-    h1 { margin: 0; font-size: 1.25rem; }
-    label { color: var(--muted); font-size: 0.9rem; }
-    select {
-      font: inherit;
-      color: inherit;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 8px;
-    }
-    .hint { color: var(--muted); font-size: 0.85rem; margin: 0; }
-    .grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 24px;
-      align-items: flex-start;
-    }
-    figure { margin: 0; }
-    figcaption {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 6px;
-      font-size: 0.85rem;
-    }
-    figcaption a { color: var(--muted); }
-    iframe {
-      display: block;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      background: var(--surface);
-    }
-  </style>
+  <title>手機畫面預覽</title>
+  <link rel="stylesheet" href="/preview.css">
 </head>
 <body>
   <header>
-    <h1>畫面預覽總覽</h1>
-    <label>寬度
-      <select id="width">
-        <option value="375x667">375 × 667（iPhone SE）</option>
-        <option value="390x844" selected>390 × 844（iPhone 標準）</option>
-        <option value="430x932">430 × 932（iPhone Pro Max）</option>
-        <option value="768x1024">768 × 1024（iPad 直向）</option>
-      </select>
-    </label>
+    <h1>手機畫面預覽</h1>
+    <nav><a href="/preview-desktop.html">切換到電腦 16:9 →</a></nav>
+    <label>裝置 <select id="device"></select></label>
+    <label>縮放 <select id="scale"></select></label>
     <label>身分
       <select id="role">
         <option value="all" selected>主持人＋一般玩家</option>
@@ -93,56 +24,20 @@
   <main class="grid" id="grid"></main>
 
   <script type="module">
-    import { PREVIEWS } from '/preview.js';
+    import { initGallery } from '/preview-gallery.js';
 
-    const grid = document.getElementById('grid');
-    const widthSelect = document.getElementById('width');
-    const roleSelect = document.getElementById('role');
-
-    // 記住上次的選擇，重新整理後不用再選
-    try {
-      widthSelect.value = localStorage.getItem('preview-width') ?? widthSelect.value;
-      roleSelect.value = localStorage.getItem('preview-role') ?? roleSelect.value;
-    } catch {}
-
-    function build() {
-      const [w, h] = widthSelect.value.split('x').map(Number);
-      const roleFilter = roleSelect.value;
-      const frames = [];
-      for (const [key, preview] of Object.entries(PREVIEWS)) {
-        const roles = preview.roles ?? [null];
-        for (const role of roles) {
-          if (role && roleFilter !== 'all' && role !== roleFilter) continue;
-          const url = `/?preview=${encodeURIComponent(key)}${role ? `&as=${role}` : ''}`;
-          const figure = document.createElement('figure');
-          const caption = document.createElement('figcaption');
-          const title = document.createElement('span');
-          title.textContent = role ? `${preview.label}｜${role === 'host' ? '主持人' : '一般玩家'}` : preview.label;
-          const link = document.createElement('a');
-          link.href = url;
-          link.target = '_blank';
-          link.textContent = '另開';
-          caption.append(title, link);
-          const iframe = document.createElement('iframe');
-          iframe.src = url;
-          iframe.width = w;
-          iframe.height = h;
-          iframe.loading = 'lazy';
-          iframe.title = title.textContent;
-          figure.append(caption, iframe);
-          frames.push(figure);
-        }
-      }
-      grid.replaceChildren(...frames);
-    }
-
-    for (const [select, storageKey] of [[widthSelect, 'preview-width'], [roleSelect, 'preview-role']]) {
-      select.addEventListener('change', () => {
-        try { localStorage.setItem(storageKey, select.value); } catch {}
-        build();
-      });
-    }
-    build();
+    initGallery({
+      devices: [
+        { label: 'iPhone SE', width: 375, height: 667 },
+        { label: 'iPhone 標準', width: 390, height: 844 },
+        { label: 'iPhone Pro Max', width: 430, height: 932 },
+        { label: 'iPad 直向', width: 768, height: 1024 },
+      ],
+      defaultDevice: 1,
+      scales: [1, 0.75, 0.5],
+      defaultScale: 1,
+      storagePrefix: 'preview-mobile',
+    });
   </script>
 </body>
 </html>

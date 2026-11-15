@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>電腦畫面預覽</title>
+  <link rel="stylesheet" href="/preview.css">
+</head>
+<body>
+  <header>
+    <h1>電腦畫面預覽（16:9）</h1>
+    <nav><a href="/preview.html">← 切換到手機</a></nav>
+    <label>解析度 <select id="device"></select></label>
+    <label>縮放 <select id="scale"></select></label>
+    <label>身分
+      <select id="role">
+        <option value="all" selected>主持人＋一般玩家</option>
+        <option value="host">只看主持人</option>
+        <option value="guest">只看一般玩家</option>
+      </select>
+    </label>
+    <p class="hint">畫面以原解析度渲染後縮小顯示，版面和實際螢幕相同。點「另開」可以用真實視窗調整。</p>
+  </header>
+  <main class="grid" id="grid"></main>
+
+  <script type="module">
+    import { initGallery } from '/preview-gallery.js';
+
+    initGallery({
+      devices: [
+        { label: '筆電 HD', width: 1280, height: 720 },
+        { label: '筆電', width: 1366, height: 768 },
+        { label: '1600 × 900', width: 1600, height: 900 },
+        { label: 'Full HD', width: 1920, height: 1080 },
+      ],
+      defaultDevice: 3,
+      scales: [0.25, 0.33, 0.5, 0.75, 1],
+      defaultScale: 0.33,
+      storagePrefix: 'preview-desktop',
+    });
+  </script>
+</body>
+</html>

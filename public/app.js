@@ -25,16 +25,21 @@ function connect() {
       $('qr').src = msg.qrDataUrl;
       $('join-url').textContent = msg.joinUrl;
     } else if (msg.type === 'state') {
-      const prev = state;
-      state = msg.state;
-      render();
-      playTransitionSound(prev, state);
+      applyState(msg.state);
     } else if (msg.type === 'error' || msg.type === 'notice') {
       showNotice(msg.message, msg.type === 'error');
     }
   });
 
   ws.addEventListener('close', () => showScreen('disconnected'));
+}
+
+/** 套用新狀態：畫面更新，並在狀態切換時播放音效。連線和劇本預覽都走這裡。 */
+function applyState(next) {
+  const prev = state;
+  state = next;
+  render();
+  playTransitionSound(prev, state);
 }
 
 function sendAction(type, payload = {}) {
@@ -295,10 +300,7 @@ if (params.has('preview')) {
   previewMode = true;
   const { startPreview } = await import('./preview.js');
   const found = startPreview(params.get('preview'), params.get('as'), {
-    setState: (s) => {
-      state = s;
-      render();
-    },
+    applyState,
     setInvite: (url, qr) => {
       $('join-url').textContent = url;
       $('qr').src = qr;

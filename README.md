@@ -13,8 +13,13 @@ npm start          # 預設 port 3000，可用 PORT=xxxx npm start 修改
 
 ## 畫面預覽（細修版面用）
 
-啟動 server 後開啟 `http://localhost:3000/preview.html`，會用手機尺寸並排顯示所有畫面，可以切換寬度和身分。
+啟動 server 後開啟：
+
+- `http://localhost:3000/preview.html`：手機尺寸，並排顯示所有畫面，可以切換裝置、縮放和身分
+- `http://localhost:3000/preview-desktop.html`：電腦 16:9（1280×720 到 1920×1080），以原解析度渲染後縮小顯示
+
 單一畫面可以直接開 `/?preview=<名稱>&as=<host|guest>`，例如 `/?preview=revealed&as=guest`。
+劇本模式 `/?preview=flow&as=<host|guest>` 會在左下角顯示控制面板，用 ◀ ▶（或鍵盤 ← →）依序切換狀態，也可以自動播放，用來看狀態切換時的動畫和音效。
 預覽使用假資料、不會連線，按鈕也不會真的送出。要新增預覽，編輯 `public/preview.js` 的 `PREVIEWS`。
 
 ## 測試
