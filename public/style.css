@@ -1,16 +1,23 @@
 /* 視覺骨架：顏色、字級、間距都集中在這裡，之後微調只要改變數 */
 :root {
-  --color-bg: #f7f5f0;
+  /* 配色：Baltic Blue #33658A、Sky Reflection #86BBD8、Charcoal Blue #2F4858、Honey Bronze #F6AE2D */
+  --color-bg: #33658a;
   --color-surface: #ffffff;
   --color-text: #222222;
-  --color-muted: #6b6b6b;
+  --color-muted: #86a5b6; /* 說明文字：#5B8298 調高明度，hsl(202 25% 62%)，原色約 48% */
   --color-border: #dddad2;
-  --color-primary: #d9534f;
+  --color-primary: #f6ae2d;
   --color-primary-text: #ffffff;
   --color-match: #2e8b57;
   --color-error: #c0392b;
   --color-done: #2e8b57;
   --color-board: #ffffff;
+  --color-frame: #86bbd8; /* 白板與 QR code 的外框 */
+  --frame-width: 4px;
+  /* 輸入框：淺色、深色模式都固定白底黑字 */
+  --color-input-bg: #ffffff;
+  --color-input-text: #000000;
+  --color-input-placeholder: #6b6b6b;
 
   --font-family: system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   --font-size-base: 16px;
@@ -29,11 +36,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #1b1b1d;
-    --color-surface: #26262a;
+    --color-surface: #2f4858; /* Charcoal Blue */
     --color-text: #eeeeee;
-    --color-muted: #a0a0a0;
-    --color-border: #3a3a40;
+    --color-border: #20313c; /* Charcoal Blue 調低明度：hsl(203 30% 18%)，原色約 26% */
   }
 }
 
@@ -101,11 +106,12 @@ input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   font: inherit;
-  color: inherit;
-  background: var(--color-surface);
+  color: var(--color-input-text);
+  background: var(--color-input-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
 }
+input::placeholder { color: var(--color-input-placeholder); }
 
 .btn {
   width: 100%;
@@ -140,7 +146,13 @@ body.is-host .guest-only { display: none; }
 .notice.is-error { color: var(--color-error); border-color: var(--color-error); }
 
 .invite { text-align: center; }
-.invite img { width: 200px; height: 200px; background: #fff; }
+.invite img {
+  width: 200px;
+  height: 200px;
+  background: #fff;
+  border: var(--frame-width) solid var(--color-frame);
+  border-radius: var(--radius);
+}
 .url { font-family: ui-monospace, monospace; word-break: break-all; }
 
 .players, .answers { list-style: none; margin: 0; padding: 0; }
@@ -175,7 +187,7 @@ body.is-host .guest-only { display: none; }
   height: auto;
   aspect-ratio: 3 / 2;
   background: var(--color-board);
-  border: 1px solid var(--color-border);
+  border: var(--frame-width) solid var(--color-frame);
   border-radius: var(--radius);
 }
 .board { touch-action: none; cursor: crosshair; -webkit-touch-callout: none; }
