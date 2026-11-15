@@ -10,6 +10,7 @@
   --color-match: #2e8b57;
   --color-error: #c0392b;
   --color-done: #2e8b57;
+  --color-board: #ffffff;
 
   --font-family: system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   --font-size-base: 16px;
@@ -72,7 +73,7 @@ h3 { margin: var(--space-4) 0 var(--space-2); font-size: 1rem; }
 .row { display: flex; gap: var(--space-2); }
 .row > * { flex: 1; }
 
-input, select {
+input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   font: inherit;
@@ -118,8 +119,8 @@ body.is-host .guest-only { display: none; }
 .invite img { width: 200px; height: 200px; background: #fff; }
 .url { font-family: ui-monospace, monospace; word-break: break-all; }
 
-.players, .answers, .history { list-style: none; margin: 0; padding: 0; }
-.players li, .answers li {
+.players, .answers { list-style: none; margin: 0; padding: 0; }
+.players li {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -143,11 +144,27 @@ body.is-host .guest-only { display: none; }
 .progress { margin: 0; color: var(--color-muted); }
 .question { font-size: var(--font-size-question); }
 
-.answers li { justify-content: space-between; }
+/* 白板與手寫答案：底色固定白色，深色模式下也維持白板感 */
+.board, .drawing {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  background: var(--color-board);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.board { touch-action: none; cursor: crosshair; }
+
+.answers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+.answers li { display: flex; flex-direction: column; gap: var(--space-1); }
 .answer-name { color: var(--color-muted); font-size: 0.9rem; }
-.answer-text { font-size: 1.25rem; font-weight: 600; word-break: break-word; }
-.answers.is-compact li { padding: var(--space-1) var(--space-2); }
-.answers.is-compact .answer-text { font-size: 1rem; }
+
+.tally { margin: var(--space-3) 0 0; text-align: center; color: var(--color-muted); }
 
 .result {
   margin: var(--space-4) 0;
@@ -159,6 +176,3 @@ body.is-host .guest-only { display: none; }
 .result.is-match { color: var(--color-match); }
 
 .score { font-size: var(--font-size-question); font-weight: 700; }
-.history li { margin-bottom: var(--space-3); }
-.history-question { margin-bottom: var(--space-1); font-weight: 600; }
-.history li.is-match .history-question { color: var(--color-match); }

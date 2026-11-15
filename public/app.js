@@ -1,7 +1,10 @@
 // 前端只負責顯示 server 傳來的狀態，並把操作送回去。
 // 所有使用者輸入的文字都用 textContent 放進畫面，不用 innerHTML。
 
+import { createBoard } from './board.js';
+
 const $ = (id) => document.getElementById(id);
+const board = createBoard($('board'));
 
 let ws;
 let state = null;
@@ -79,17 +82,18 @@ function renderAnswers(listEl, answers) {
       const name = document.createElement('span');
       name.className = 'answer-name';
       name.textContent = a.name;
-      const text = document.createElement('span');
-      text.className = 'answer-text';
-      text.textContent = a.text;
-      li.append(name, text);
+      const img = document.createElement('img');
+      img.className = 'drawing';
+      img.alt = `${a.name} 的答案`;
+      img.src = a.image;
+      li.append(name, img);
       return li;
     }),
   );
 }
 
 function progressText(q) {
-  return `第 ${q.number} / ${q.total} 題`;
+  return `第 ${q.number} 題｜目標：一致 ${state.targetMatches} 次`;
 }
 
 // ---- 各畫面 ----
@@ -119,17 +123,16 @@ function render() {
 }
 
 function renderLobby() {
-  const { players, limits, questionCount } = state;
+  const { players, limits, targetMatches } = state;
   $('lobby-count').textContent = `${players.length} / ${limits.maxPlayers}`;
   renderPlayers($('lobby-players'), players);
 
-  const select = $('question-count');
-  if (select.options.length === 0) {
-    for (let n = limits.minQuestions; n <= limits.maxQuestions; n++) {
-      select.append(new Option(`${n} 題`, String(n)));
-    }
-  }
-  select.value = String(questionCount);
+  const input = $('target-input');
+  input.min = limits.minTarget;
+  input.max = limits.maxTarget;
+  // 主持人正在輸入時不要覆蓋
+  if (document.activeElement !== input) input.value = String(targetMatches);
+  $('lobby-target').textContent = `目標：一致 ${targetMatches} 次才結束`;
 
   const enough = players.length >= limits.minPlayers;
   $('start-btn').disabled = !enough;
@@ -139,19 +142,21 @@ function renderLobby() {
 }
 
 function renderAnswering() {
-  const { question, players, you, allAnswered, limits } = state;
+  const { question, players, you, allAnswered } = state;
 
-  // 換題時清空輸入框；同一題內收到狀態更新時不要動到正在打字的內容
+  // 換題時清空白板；同一題內收到狀態更新時不要動到正在寫的內容
   if (question.number !== lastQuestionNumber) {
     lastQuestionNumber = question.number;
-    $('answer-input').value = '';
+    board.clear();
   }
-  $('answer-input').maxLength = limits.maxAnswerLength;
 
   $('answer-progress').textContent = progressText(question);
   $('answer-question').textContent = question.text;
-  $('answer-btn').textContent = you.answer ? '更新答案' : '送出答案';
-  $('my-answer').textContent = you.answer ? `你的答案：${you.answer}（公開前都可以修改）` : '';
+  $('answer-form').hidden = Boolean(you.answer);
+  $('my-answer').hidden = !you.answer;
+  if (you.answer && $('my-answer-img').getAttribute('src') !== you.answer) {
+    $('my-answer-img').src = you.answer;
+  }
 
   const done = players.filter((p) => p.answered).length;
   $('answered-count').textContent = `${done} / ${players.length}`;
@@ -163,10 +168,12 @@ function renderAnswering() {
 }
 
 function renderRevealed() {
-  const { phase, question, revealed, lastMatch } = state;
+  const { phase, question, revealed, lastMatch, tally, targetMatches, targetReached } = state;
   $('reveal-progress').textContent = progressText(question);
   $('reveal-question').textContent = question.text;
   renderAnswers($('reveal-answers'), revealed);
+  $('tally').textContent =
+    `目前一致 ${tally.match} 題・不一致 ${tally.miss} 題（目標一致 ${targetMatches} 次）`;
 
   const judged = phase === 'judged';
   const result = $('result');
@@ -178,28 +185,16 @@ function renderRevealed() {
 
   $('judge-buttons').hidden = judged;
   $('next-btn').hidden = !judged;
-  $('next-btn').textContent = question.number >= question.total ? '看結算' : '下一題';
+  $('next-btn').textContent = targetReached ? '看結算' : '下一題';
   $('reveal-wait').textContent = judged ? '等待主持人進到下一題…' : '等待主持人判定…';
   showScreen('revealed');
 }
 
 function renderFinished() {
-  const { history, score } = state;
-  $('score').textContent = `一致 ${score} / ${history.length} 題`;
-  $('history').replaceChildren(
-    ...history.map((h) => {
-      const li = document.createElement('li');
-      li.className = h.match ? 'is-match' : '';
-      const title = document.createElement('div');
-      title.className = 'history-question';
-      title.textContent = `${h.match ? '一致' : '不一致'}｜${h.question}`;
-      const answers = document.createElement('ul');
-      answers.className = 'answers is-compact';
-      renderAnswers(answers, h.answers);
-      li.append(title, answers);
-      return li;
-    }),
-  );
+  const { rounds, tally, targetMatches, targetReached } = state;
+  $('score').textContent = targetReached
+    ? `達成目標！一共答了 ${rounds} 題，一致 ${tally.match} 次`
+    : `人數不足，提前結束：一致 ${tally.match} / ${targetMatches} 次，一共答了 ${rounds} 題`;
   showScreen('finished');
 }
 
@@ -210,15 +205,28 @@ $('join-form').addEventListener('submit', (e) => {
   sendAction('join', { name: $('name-input').value });
 });
 
-$('question-count').addEventListener('change', (e) => {
-  sendAction('setQuestionCount', { count: Number(e.target.value) });
+$('target-input').addEventListener('change', (e) => {
+  const n = Number(e.target.value);
+  const { minTarget, maxTarget } = state.limits;
+  if (!Number.isInteger(n) || n < minTarget || n > maxTarget) {
+    showNotice(`請輸入 ${minTarget} 到 ${maxTarget} 之間的整數`, true);
+    e.target.value = String(state.targetMatches);
+    return;
+  }
+  sendAction('setTargetMatches', { count: n });
 });
 
 $('start-btn').addEventListener('click', () => sendAction('start'));
 
-$('answer-form').addEventListener('submit', (e) => {
-  e.preventDefault();
-  sendAction('answer', { text: $('answer-input').value });
+$('clear-btn').addEventListener('click', () => board.clear());
+
+$('submit-btn').addEventListener('click', () => {
+  if (board.isEmpty()) return showNotice('白板上還沒有寫東西', true);
+  const image = board.toDataURL();
+  if (image.length > state.limits.maxDrawingLength) {
+    return showNotice('圖太大了，請清除後簡化一點再送出', true);
+  }
+  sendAction('answer', { image });
 });
 
 $('reveal-btn').addEventListener('click', () => sendAction('reveal'));

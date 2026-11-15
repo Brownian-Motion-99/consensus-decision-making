@@ -3,10 +3,13 @@
 
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
-export const MIN_QUESTIONS = 6;
-export const MAX_QUESTIONS = 10;
+export const MIN_TARGET = 1;
+export const MAX_TARGET = 99;
+export const DEFAULT_TARGET = 3;
 export const MAX_NAME_LENGTH = 12;
-export const MAX_ANSWER_LENGTH = 30;
+// 手寫答案是 PNG data URL，限制大小避免塞爆連線
+export const MAX_DRAWING_LENGTH = 200_000;
+const DRAWING_PATTERN = /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/;
 
 export class Room {
   /**
@@ -15,24 +18,23 @@ export class Room {
    * @param {() => number} [opts.random] 可注入的亂數，測試用
    */
   constructor({ questions, random = Math.random }) {
-    if (questions.length < MIN_QUESTIONS) {
-      throw new Error(`題庫至少需要 ${MIN_QUESTIONS} 題`);
-    }
+    if (questions.length < 2) throw new Error('題庫至少需要 2 題');
     this.questionBank = questions;
     this.random = random;
     this.players = new Map(); // id -> { id, name }
     this.hostId = null;
-    this.questionCount = Math.min(8, MAX_QUESTIONS, questions.length);
+    this.targetMatches = DEFAULT_TARGET;
     this.resetGame();
   }
 
   resetGame() {
     this.phase = 'lobby';
-    this.questions = [];
-    this.index = 0;
-    this.answers = new Map(); // 目前題目：playerId -> text
-    this.revealed = null; // 公開時的答案快照：[{ name, text }]
-    this.history = []; // [{ question, answers: [{ name, text }], match }]
+    this.deck = []; // 還沒出過的題目，抽完會重新洗牌
+    this.question = null;
+    this.number = 0; // 目前是第幾題
+    this.answers = new Map(); // 目前題目：playerId -> 手寫圖片 data URL
+    this.revealed = null; // 公開時的答案快照：[{ name, image }]
+    this.history = []; // [{ question, match }]，不保留圖片，避免無限出題時記憶體一直長
   }
 
   // ---- 玩家進出 ----
@@ -84,15 +86,14 @@ export class Room {
 
   // ---- 主持人操作 ----
 
-  setQuestionCount(id, count) {
-    if (id !== this.hostId) return '只有主持人可以調整題數';
-    if (this.phase !== 'lobby') return '遊戲開始後不能調整題數';
+  setTargetMatches(id, count) {
+    if (id !== this.hostId) return '只有主持人可以調整目標';
+    if (this.phase !== 'lobby') return '遊戲開始後不能調整目標';
     const n = Number(count);
-    const max = Math.min(MAX_QUESTIONS, this.questionBank.length);
-    if (!Number.isInteger(n) || n < MIN_QUESTIONS || n > max) {
-      return `題數需介於 ${MIN_QUESTIONS} 到 ${max} 之間`;
+    if (!Number.isInteger(n) || n < MIN_TARGET || n > MAX_TARGET) {
+      return `目標一致次數需介於 ${MIN_TARGET} 到 ${MAX_TARGET} 之間`;
     }
-    this.questionCount = n;
+    this.targetMatches = n;
     return null;
   }
 
@@ -101,8 +102,7 @@ export class Room {
     if (this.phase !== 'lobby') return '遊戲已經開始了';
     if (this.players.size < MIN_PLAYERS) return `至少需要 ${MIN_PLAYERS} 人才能開始`;
     this.resetGame();
-    this.questions = this.drawQuestions(this.questionCount);
-    this.phase = 'answering';
+    this.nextQuestion();
     return null;
   }
 
@@ -112,7 +112,7 @@ export class Room {
     if (!this.allAnswered()) return '還有人沒送出答案';
     this.revealed = [...this.players.values()].map((p) => ({
       name: p.name,
-      text: this.answers.get(p.id),
+      image: this.answers.get(p.id),
     }));
     this.phase = 'revealed';
     return null;
@@ -122,25 +122,21 @@ export class Room {
     if (id !== this.hostId) return '只有主持人可以判定';
     if (this.phase !== 'revealed') return '現在不能判定';
     if (typeof match !== 'boolean') return '判定結果格式錯誤';
-    this.history.push({
-      question: this.questions[this.index],
-      answers: this.revealed,
-      match,
-    });
+    this.history.push({ question: this.question, match });
     this.phase = 'judged';
     return null;
   }
 
+  /** 達到目標一致次數就結算，否則一直出下一題。 */
   next(id) {
     if (id !== this.hostId) return '只有主持人可以進到下一題';
     if (this.phase !== 'judged') return '現在不能進到下一題';
-    this.answers = new Map();
-    this.revealed = null;
-    if (this.index + 1 >= this.questions.length) {
+    if (this.targetReached()) {
+      this.answers = new Map();
+      this.revealed = null;
       this.phase = 'finished';
     } else {
-      this.index += 1;
-      this.phase = 'answering';
+      this.nextQuestion();
     }
     return null;
   }
@@ -154,14 +150,39 @@ export class Room {
 
   // ---- 玩家操作 ----
 
-  answer(id, rawText) {
+  answer(id, image) {
     if (!this.players.has(id)) return '你不在這局遊戲裡';
     if (this.phase !== 'answering') return '現在不能作答';
-    const text = String(rawText ?? '').trim();
-    if (!text) return '答案不能是空的';
-    if ([...text].length > MAX_ANSWER_LENGTH) return `答案最多 ${MAX_ANSWER_LENGTH} 個字`;
-    this.answers.set(id, text); // 公開前可以改答案
+    if (this.answers.has(id)) return '已經送出答案，不能修改';
+    if (typeof image !== 'string' || !DRAWING_PATTERN.test(image)) return '答案格式錯誤';
+    if (image.length > MAX_DRAWING_LENGTH) return '圖太大了，請簡化一點再送出';
+    this.answers.set(id, image);
     return null;
+  }
+
+  // ---- 內部 ----
+
+  nextQuestion() {
+    if (this.deck.length === 0) {
+      this.deck = this.shuffle([...this.questionBank]);
+      // 重新洗牌後，避免下一題剛好和上一題一樣
+      if (this.deck.at(-1) === this.question) {
+        [this.deck[0], this.deck[this.deck.length - 1]] = [this.deck.at(-1), this.deck[0]];
+      }
+    }
+    this.question = this.deck.pop();
+    this.number += 1;
+    this.answers = new Map();
+    this.revealed = null;
+    this.phase = 'answering';
+  }
+
+  shuffle(list) {
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(this.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
   }
 
   // ---- 查詢 ----
@@ -173,13 +194,12 @@ export class Room {
     return true;
   }
 
-  drawQuestions(n) {
-    const pool = [...this.questionBank];
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(this.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
-    return pool.slice(0, n);
+  matchCount() {
+    return this.history.filter((h) => h.match).length;
+  }
+
+  targetReached() {
+    return this.matchCount() >= this.targetMatches;
   }
 
   /**
@@ -187,7 +207,7 @@ export class Room {
    * @param {string} viewerId
    */
   viewFor(viewerId) {
-    const showQuestion = this.inGame();
+    const matches = this.matchCount();
     return {
       phase: this.phase,
       you: {
@@ -205,22 +225,20 @@ export class Room {
       limits: {
         minPlayers: MIN_PLAYERS,
         maxPlayers: MAX_PLAYERS,
-        minQuestions: MIN_QUESTIONS,
-        maxQuestions: Math.min(MAX_QUESTIONS, this.questionBank.length),
+        minTarget: MIN_TARGET,
+        maxTarget: MAX_TARGET,
+        maxDrawingLength: MAX_DRAWING_LENGTH,
         maxNameLength: MAX_NAME_LENGTH,
-        maxAnswerLength: MAX_ANSWER_LENGTH,
       },
-      questionCount: this.questionCount,
-      question: showQuestion
-        ? { number: this.index + 1, total: this.questions.length, text: this.questions[this.index] }
-        : null,
+      targetMatches: this.targetMatches,
+      question: this.inGame() ? { number: this.number, text: this.question } : null,
       allAnswered: this.phase === 'answering' && this.allAnswered(),
       revealed:
         this.phase === 'revealed' || this.phase === 'judged' ? this.revealed : null,
       lastMatch: this.phase === 'judged' ? this.history.at(-1).match : null,
-      history: this.phase === 'finished' ? this.history : null,
-      score: this.history.filter((h) => h.match).length,
-      judgedCount: this.history.length,
+      rounds: this.history.length,
+      tally: { match: matches, miss: this.history.length - matches },
+      targetReached: this.targetReached(),
     };
   }
 }

@@ -17,6 +17,7 @@ const STATIC_FILES = {
   '/': ['index.html', 'text/html; charset=utf-8'],
   '/index.html': ['index.html', 'text/html; charset=utf-8'],
   '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
+  '/board.js': ['board.js', 'text/javascript; charset=utf-8'],
   '/style.css': ['style.css', 'text/css; charset=utf-8'],
 };
 
@@ -56,7 +57,7 @@ const http = createServer(async (req, res) => {
   }
 });
 
-const wss = new WebSocketServer({ server: http, maxPayload: 4 * 1024 });
+const wss = new WebSocketServer({ server: http, maxPayload: 256 * 1024 });
 const clients = new Map(); // ws -> playerId
 
 function send(ws, msg) {
@@ -73,9 +74,9 @@ function broadcastNotice(message) {
 
 const handlers = {
   join: (id, msg) => room.join(id, msg.name),
-  setQuestionCount: (id, msg) => room.setQuestionCount(id, msg.count),
+  setTargetMatches: (id, msg) => room.setTargetMatches(id, msg.count),
   start: (id) => room.start(id),
-  answer: (id, msg) => room.answer(id, msg.text),
+  answer: (id, msg) => room.answer(id, msg.image),
   reveal: (id) => room.reveal(id),
   judge: (id, msg) => room.judge(id, msg.match),
   next: (id) => room.next(id),
