@@ -8,7 +8,7 @@
   --color-border: #dddad2;
   --color-primary: #f6ae2d;
   --color-primary-text: #ffffff;
-  --color-match: #2e8b57;
+  --color-match: #28bd69; /* 「一致！」：原 #2E8B57 hsl(146 50% 36%) 調高彩度和明度，hsl(146 65% 45%) */
   --color-error: #c0392b;
   --color-done: #2e8b57;
   --color-board: #ffffff;
