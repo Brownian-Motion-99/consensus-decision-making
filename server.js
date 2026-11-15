@@ -20,6 +20,8 @@ const STATIC_FILES = {
   '/board.js': ['public/board.js', 'text/javascript; charset=utf-8'],
   '/sounds.js': ['public/sounds.js', 'text/javascript; charset=utf-8'],
   '/style.css': ['public/style.css', 'text/css; charset=utf-8'],
+  '/preview.html': ['public/preview.html', 'text/html; charset=utf-8'],
+  '/preview.js': ['public/preview.js', 'text/javascript; charset=utf-8'],
   '/audio/correct.mp3': ['audio/correct.mp3', 'audio/mpeg'],
   '/audio/wrong.mp3': ['audio/wrong.mp3', 'audio/mpeg'],
   '/audio/congrats.mp3': ['audio/congrats.mp3', 'audio/mpeg'],

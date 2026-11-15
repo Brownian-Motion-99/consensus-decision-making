@@ -10,6 +10,7 @@ const board = createBoard($('board'), {
 });
 
 let ws;
+let previewMode = false; // 開發用預覽，不連線（見 preview.js）
 let state = null;
 let lastQuestionNumber = null;
 let noticeTimer = null;
@@ -37,6 +38,7 @@ function connect() {
 }
 
 function sendAction(type, payload = {}) {
+  if (previewMode) return showNotice(`預覽模式：不會送出「${type}」`, false);
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type, ...payload }));
 }
 
@@ -61,13 +63,13 @@ function setZoomLocked(locked) {
   document.documentElement.classList.toggle('zoom-locked', locked);
 }
 
-function showNotice(message, isError) {
+function showNotice(message, isError, { persist = false } = {}) {
   const el = $('notice');
   el.textContent = message;
   el.classList.toggle('is-error', isError);
   el.hidden = false;
   clearTimeout(noticeTimer);
-  noticeTimer = setTimeout(() => (el.hidden = true), 4000);
+  if (!persist) noticeTimer = setTimeout(() => (el.hidden = true), 4000);
 }
 
 function renderPlayers(listEl, players, { showAnswered = false } = {}) {
@@ -287,4 +289,24 @@ loadSounds({
   wrong: '/audio/wrong.mp3',
   congrats: '/audio/congrats.mp3',
 });
-connect();
+
+const params = new URLSearchParams(location.search);
+if (params.has('preview')) {
+  previewMode = true;
+  const { startPreview } = await import('./preview.js');
+  const found = startPreview(params.get('preview'), params.get('as'), {
+    setState: (s) => {
+      state = s;
+      render();
+    },
+    setInvite: (url, qr) => {
+      $('join-url').textContent = url;
+      $('qr').src = qr;
+    },
+    showScreen,
+    showNotice,
+  });
+  if (!found) location.replace('/preview.html');
+} else {
+  connect();
+}
