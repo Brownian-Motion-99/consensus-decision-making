@@ -4,7 +4,9 @@
 import { createBoard } from './board.js';
 
 const $ = (id) => document.getElementById(id);
-const board = createBoard($('board'));
+const board = createBoard($('board'), {
+  fontFamily: getComputedStyle(document.body).fontFamily,
+});
 
 let ws;
 let state = null;
@@ -41,6 +43,19 @@ function showScreen(name) {
   for (const el of document.querySelectorAll('[data-screen]')) {
     el.hidden = el.dataset.screen !== name;
   }
+  setZoomLocked(name === 'answering');
+}
+
+// 作答時鎖住縮放，避免寫白板時誤觸；其他畫面可以自由縮放
+const VIEWPORT_DEFAULT = 'width=device-width, initial-scale=1';
+const VIEWPORT_LOCKED = `${VIEWPORT_DEFAULT}, maximum-scale=1, user-scalable=no`;
+let zoomLocked = false;
+
+function setZoomLocked(locked) {
+  if (locked === zoomLocked) return;
+  zoomLocked = locked;
+  $('viewport').content = locked ? VIEWPORT_LOCKED : VIEWPORT_DEFAULT;
+  document.documentElement.classList.toggle('zoom-locked', locked);
 }
 
 function showNotice(message, isError) {
@@ -147,7 +162,7 @@ function renderAnswering() {
   // 換題時清空白板；同一題內收到狀態更新時不要動到正在寫的內容
   if (question.number !== lastQuestionNumber) {
     lastQuestionNumber = question.number;
-    board.clear();
+    clearAnswer();
   }
 
   $('answer-progress').textContent = progressText(question);
@@ -218,7 +233,20 @@ $('target-input').addEventListener('change', (e) => {
 
 $('start-btn').addEventListener('click', () => sendAction('start'));
 
-$('clear-btn').addEventListener('click', () => board.clear());
+function clearAnswer() {
+  board.clear();
+  $('type-input').value = '';
+}
+
+$('clear-btn').addEventListener('click', clearAnswer);
+
+// 打字即時同步到白板的文字層
+$('type-input').addEventListener('input', (e) => board.setText(e.target.value));
+
+$('type-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  $('type-input').blur(); // 按完成時收起手機鍵盤，才看得到整個白板
+});
 
 $('submit-btn').addEventListener('click', () => {
   if (board.isEmpty()) return showNotice('白板上還沒有寫東西', true);
@@ -235,5 +263,12 @@ $('nomatch-btn').addEventListener('click', () => sendAction('judge', { match: fa
 $('next-btn').addEventListener('click', () => sendAction('next'));
 $('lobby-btn').addEventListener('click', () => sendAction('backToLobby'));
 $('reload-btn').addEventListener('click', () => location.reload());
+
+// iOS Safari 會忽略 user-scalable=no，作答時要另外擋掉雙指縮放手勢
+for (const type of ['gesturestart', 'gesturechange']) {
+  document.addEventListener(type, (e) => {
+    if (zoomLocked) e.preventDefault();
+  });
+}
 
 connect();

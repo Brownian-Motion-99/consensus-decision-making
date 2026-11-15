@@ -21,9 +21,8 @@ test('第一個加入的人是主持人', () => {
   assert.equal(room.hostId, 'A');
 });
 
-test('加入的限制：暱稱重複、空白、人數上限、遊戲中', () => {
+test('加入的限制：空白、人數上限、遊戲中', () => {
   const room = setup(['A']);
-  assert.match(room.join('x', 'A'), /暱稱/);
   assert.match(room.join('x', '  '), /暱稱/);
   for (const n of ['B', 'C', 'D', 'E', 'F']) assert.equal(room.join(n, n), null);
   assert.match(room.join('G', 'G'), /已滿/);
@@ -31,6 +30,16 @@ test('加入的限制：暱稱重複、空白、人數上限、遊戲中', () =>
   const room2 = setup(['A', 'B']);
   room2.start('A');
   assert.match(room2.join('C', 'C'), /進行中/);
+});
+
+test('暱稱可以重複，玩家用 id 區分', () => {
+  const room = new Room({ questions: QUESTIONS });
+  assert.equal(room.join('id-1', '小明'), null);
+  assert.equal(room.join('id-2', '小明'), null);
+  assert.equal(room.players.size, 2);
+  const view = room.viewFor('id-2');
+  assert.equal(view.you.isHost, false);
+  assert.deepEqual(view.players.map((p) => p.id), ['id-1', 'id-2']);
 });
 
 test('只有主持人能開始，且至少 2 人', () => {

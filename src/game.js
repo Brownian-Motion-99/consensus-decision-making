@@ -46,9 +46,6 @@ export class Room {
     const name = String(rawName ?? '').trim();
     if (!name) return '請輸入暱稱';
     if ([...name].length > MAX_NAME_LENGTH) return `暱稱最多 ${MAX_NAME_LENGTH} 個字`;
-    for (const p of this.players.values()) {
-      if (p.name === name) return '這個暱稱已經有人用了';
-    }
     this.players.set(id, { id, name });
     if (!this.hostId) this.hostId = id;
     return null;

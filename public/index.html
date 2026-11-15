@@ -2,7 +2,7 @@
 <html lang="zh-Hant-TW">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" id="viewport" content="width=device-width, initial-scale=1">
   <title>默契一致</title>
   <link rel="stylesheet" href="/style.css">
 </head>
@@ -61,6 +61,10 @@
       <h2 class="question" id="answer-question"></h2>
       <div id="answer-form" class="stack">
         <canvas id="board" class="board" width="600" height="400" aria-label="手寫答案的白板"></canvas>
+        <form id="type-form">
+          <input id="type-input" maxlength="30" autocomplete="off" enterkeyhint="done"
+            placeholder="懶得寫字？打字也可以" aria-label="打字作答">
+        </form>
         <div class="row">
           <button type="button" id="clear-btn" class="btn">清除</button>
           <button type="button" id="submit-btn" class="btn btn-primary">送出答案</button>

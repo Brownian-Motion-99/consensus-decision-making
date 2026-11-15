@@ -45,6 +45,21 @@ body {
   font-family: var(--font-family);
   font-size: var(--font-size-base);
   line-height: 1.5;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 作答畫面才鎖縮放：只允許捲動，關掉雙擊和雙指縮放（iOS 另外由 viewport 和 JS 處理） */
+html.zoom-locked { touch-action: pan-x pan-y; }
+
+/* 遊戲畫面不需要選取文字，避免長按或寫白板時反白；輸入框除外 */
+.screen {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.screen input {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .topbar {
@@ -154,7 +169,7 @@ body.is-host .guest-only { display: none; }
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
 }
-.board { touch-action: none; cursor: crosshair; }
+.board { touch-action: none; cursor: crosshair; -webkit-touch-callout: none; }
 
 .answers {
   display: grid;
