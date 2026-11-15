@@ -50,7 +50,7 @@ function showScreen(name) {
 }
 
 // 作答時鎖住縮放，避免寫白板時誤觸；其他畫面可以自由縮放
-const VIEWPORT_DEFAULT = 'width=device-width, initial-scale=1';
+const VIEWPORT_DEFAULT = 'width=device-width, initial-scale=1, viewport-fit=cover';
 const VIEWPORT_LOCKED = `${VIEWPORT_DEFAULT}, maximum-scale=1, user-scalable=no`;
 let zoomLocked = false;
 

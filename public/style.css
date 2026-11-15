@@ -23,6 +23,8 @@
   --space-4: 24px;
   --radius: 10px;
   --max-width: 560px;
+  /* 頁面底部額外留白，避免最下面的按鈕被 Safari 浮動工具列蓋住 */
+  --bottom-bleed: 96px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -68,6 +70,10 @@ html.zoom-locked { touch-action: pan-x pan-y; }
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
+  /* viewport-fit=cover 時避開瀏海、動態島和橫向時的左右圓角 */
+  padding-top: calc(var(--space-2) + env(safe-area-inset-top, 0px));
+  padding-left: calc(var(--space-3) + env(safe-area-inset-left, 0px));
+  padding-right: calc(var(--space-3) + env(safe-area-inset-right, 0px));
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
 }
@@ -78,6 +84,9 @@ html.zoom-locked { touch-action: pan-x pan-y; }
   max-width: var(--max-width);
   margin: 0 auto;
   padding: var(--space-3);
+  padding-left: calc(var(--space-3) + env(safe-area-inset-left, 0px));
+  padding-right: calc(var(--space-3) + env(safe-area-inset-right, 0px));
+  padding-bottom: calc(var(--bottom-bleed) + env(safe-area-inset-bottom, 0px));
 }
 
 h2 { margin: var(--space-3) 0; }
