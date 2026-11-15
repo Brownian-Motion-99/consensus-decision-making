@@ -1,0 +1,164 @@
+/* 視覺骨架：顏色、字級、間距都集中在這裡，之後微調只要改變數 */
+:root {
+  --color-bg: #f7f5f0;
+  --color-surface: #ffffff;
+  --color-text: #222222;
+  --color-muted: #6b6b6b;
+  --color-border: #dddad2;
+  --color-primary: #d9534f;
+  --color-primary-text: #ffffff;
+  --color-match: #2e8b57;
+  --color-error: #c0392b;
+  --color-done: #2e8b57;
+
+  --font-family: system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  --font-size-base: 16px;
+  --font-size-question: 1.5rem;
+  --font-size-result: 2.5rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --radius: 10px;
+  --max-width: 560px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1b1b1d;
+    --color-surface: #26262a;
+    --color-text: #eeeeee;
+    --color-muted: #a0a0a0;
+    --color-border: #3a3a40;
+  }
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.brand { margin: 0; font-size: 1.25rem; }
+.me { color: var(--color-muted); font-size: 0.9rem; }
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--space-3);
+}
+
+h2 { margin: var(--space-3) 0; }
+h3 { margin: var(--space-4) 0 var(--space-2); font-size: 1rem; }
+.muted { color: var(--color-muted); }
+
+.stack { display: flex; flex-direction: column; gap: var(--space-2); }
+.row { display: flex; gap: var(--space-2); }
+.row > * { flex: 1; }
+
+input, select {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  color: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.btn {
+  width: 100%;
+  padding: var(--space-3);
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.btn-primary {
+  color: var(--color-primary-text);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.host-only { margin-top: var(--space-4); }
+
+/* 主持人／一般玩家各自才看得到的區塊 */
+body:not(.is-host) .host-only { display: none; }
+body.is-host .guest-only { display: none; }
+
+.notice {
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.notice.is-error { color: var(--color-error); border-color: var(--color-error); }
+
+.invite { text-align: center; }
+.invite img { width: 200px; height: 200px; background: #fff; }
+.url { font-family: ui-monospace, monospace; word-break: break-all; }
+
+.players, .answers, .history { list-style: none; margin: 0; padding: 0; }
+.players li, .answers li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.players li.is-me { border-color: var(--color-primary); }
+.badge {
+  font-size: 0.75rem;
+  padding: 0 var(--space-2);
+  color: var(--color-primary-text);
+  background: var(--color-primary);
+  border-radius: 999px;
+}
+.mark { margin-left: auto; font-size: 0.85rem; color: var(--color-muted); }
+.mark.is-done { color: var(--color-done); }
+
+.progress { margin: 0; color: var(--color-muted); }
+.question { font-size: var(--font-size-question); }
+
+.answers li { justify-content: space-between; }
+.answer-name { color: var(--color-muted); font-size: 0.9rem; }
+.answer-text { font-size: 1.25rem; font-weight: 600; word-break: break-word; }
+.answers.is-compact li { padding: var(--space-1) var(--space-2); }
+.answers.is-compact .answer-text { font-size: 1rem; }
+
+.result {
+  margin: var(--space-4) 0;
+  text-align: center;
+  font-size: var(--font-size-result);
+  font-weight: 700;
+  color: var(--color-muted);
+}
+.result.is-match { color: var(--color-match); }
+
+.score { font-size: var(--font-size-question); font-weight: 700; }
+.history li { margin-bottom: var(--space-3); }
+.history-question { margin-bottom: var(--space-1); font-weight: 600; }
+.history li.is-match .history-question { color: var(--color-match); }

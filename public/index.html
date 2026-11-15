@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>默契一致</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="brand">默契一致</h1>
+    <div class="me" id="me" hidden></div>
+  </header>
+
+  <main class="container">
+    <div class="notice" id="notice" hidden></div>
+
+    <!-- 連線中 -->
+    <section class="screen" data-screen="connecting">
+      <p class="muted">連線中…</p>
+    </section>
+
+    <!-- 加入 -->
+    <section class="screen" data-screen="join" hidden>
+      <h2>加入遊戲</h2>
+      <form id="join-form" class="stack">
+        <label for="name-input">暱稱</label>
+        <input id="name-input" autocomplete="off" required>
+        <button type="submit" class="btn btn-primary">加入</button>
+      </form>
+    </section>
+
+    <!-- 遊戲進行中，無法加入 -->
+    <section class="screen" data-screen="locked" hidden>
+      <h2>遊戲進行中</h2>
+      <p class="muted">這局結束、回到大廳之後就可以加入。</p>
+    </section>
+
+    <!-- 大廳 -->
+    <section class="screen" data-screen="lobby" hidden>
+      <h2>大廳</h2>
+      <div class="invite">
+        <img id="qr" alt="加入遊戲的 QR code">
+        <p class="muted">用手機掃描，或在瀏覽器輸入</p>
+        <p class="url" id="join-url"></p>
+      </div>
+      <h3>玩家 <span id="lobby-count"></span></h3>
+      <ul class="players" id="lobby-players"></ul>
+      <div class="host-only stack">
+        <label for="question-count">題數</label>
+        <select id="question-count"></select>
+        <button id="start-btn" class="btn btn-primary">開始遊戲</button>
+      </div>
+      <p class="guest-only muted">等待主持人開始遊戲…</p>
+    </section>
+
+    <!-- 作答 -->
+    <section class="screen" data-screen="answering" hidden>
+      <p class="progress" id="answer-progress"></p>
+      <h2 class="question" id="answer-question"></h2>
+      <form id="answer-form" class="stack">
+        <input id="answer-input" autocomplete="off" placeholder="輸入你的答案" required>
+        <button type="submit" class="btn btn-primary" id="answer-btn">送出答案</button>
+      </form>
+      <p class="muted" id="my-answer"></p>
+      <h3>作答進度 <span id="answered-count"></span></h3>
+      <ul class="players" id="answer-players"></ul>
+      <div class="host-only">
+        <button id="reveal-btn" class="btn btn-primary">公開答案</button>
+      </div>
+    </section>
+
+    <!-- 公開答案 + 判定 -->
+    <section class="screen" data-screen="revealed" hidden>
+      <p class="progress" id="reveal-progress"></p>
+      <h2 class="question" id="reveal-question"></h2>
+      <ul class="answers" id="reveal-answers"></ul>
+      <div class="result" id="result" hidden></div>
+      <div class="host-only">
+        <div class="row" id="judge-buttons">
+          <button id="match-btn" class="btn btn-primary">一致</button>
+          <button id="nomatch-btn" class="btn">不一致</button>
+        </div>
+        <button id="next-btn" class="btn btn-primary" hidden></button>
+      </div>
+      <p class="guest-only muted" id="reveal-wait"></p>
+    </section>
+
+    <!-- 結算 -->
+    <section class="screen" data-screen="finished" hidden>
+      <h2>結算</h2>
+      <p class="score" id="score"></p>
+      <ol class="history" id="history"></ol>
+      <div class="host-only">
+        <button id="lobby-btn" class="btn btn-primary">回到大廳</button>
+      </div>
+      <p class="guest-only muted">等待主持人回到大廳…</p>
+    </section>
+
+    <!-- 斷線 -->
+    <section class="screen" data-screen="disconnected" hidden>
+      <h2>連線中斷</h2>
+      <p class="muted">目前不支援重新連線，請重新整理頁面，等下一局再加入。</p>
+      <button class="btn" id="reload-btn">重新整理</button>
+    </section>
+  </main>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
