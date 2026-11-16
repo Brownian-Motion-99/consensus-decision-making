@@ -1,12 +1,16 @@
 // 音效：用 Web Audio API 播放。手機瀏覽器要求使用者操作過才能出聲，
 // 所以在第一次點擊或按鍵時解鎖，之後就算是別人觸發的事件（例如主持人判定）也能播放。
 
+import { integratedLoudness } from './loudness.js';
+
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 const ctx = AudioCtx ? new AudioCtx() : null;
 const sounds = new Map(); // name -> { buffer, gain }
 const playing = new Map(); // name -> Set<AudioBufferSourceNode>，用來中途停止
-// 每個音效的峰值都調到這個大小（約 -1 dBFS），讓最大音量一致
-const TARGET_PEAK = 0.89;
+// 每個音效都調到這個感知響度，讓聽起來一樣大聲
+const TARGET_LOUDNESS = -14; // LUFS
+// 但峰值不超過約 -1 dBFS，避免破音。太安靜的音效寧可小聲一點
+const MAX_PEAK = 0.89;
 const UNLOCK_EVENTS = ['pointerdown', 'touchend', 'keydown'];
 
 /** 預先下載並解碼音效。失敗時只是沒有聲音，不影響遊戲。 */
@@ -16,7 +20,7 @@ export function loadSounds(files) {
     fetch(url)
       .then((res) => res.arrayBuffer())
       .then((data) => ctx.decodeAudioData(data))
-      .then((buffer) => sounds.set(name, { buffer, gain: TARGET_PEAK / peakOf(buffer) }))
+      .then((buffer) => sounds.set(name, { buffer, gain: normalizingGain(buffer) }))
       .catch((err) => console.warn(`音效 ${name} 載入失敗`, err));
   }
 
@@ -32,6 +36,16 @@ export function loadSounds(files) {
     }
   };
   for (const type of UNLOCK_EVENTS) document.addEventListener(type, unlock, true);
+}
+
+/** 把音效調到目標響度的倍率，受峰值上限限制。 */
+function normalizingGain(buffer) {
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, ch) => buffer.getChannelData(ch));
+  // 單聲道會同時從左右喇叭播出，聽起來跟兩個相同的聲道一樣大聲
+  const loudness = integratedLoudness(channels.length === 1 ? [channels[0], channels[0]] : channels, buffer.sampleRate);
+  const peakGain = MAX_PEAK / peakOf(buffer);
+  if (!Number.isFinite(loudness)) return 1; // 全靜音的檔案不調整
+  return Math.min(10 ** ((TARGET_LOUDNESS - loudness) / 20), peakGain);
 }
 
 /** 所有聲道中取樣絕對值的最大值。 */

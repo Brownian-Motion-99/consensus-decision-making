@@ -31,6 +31,7 @@ const STATIC_FILES = {
   '/app.js': ['public/app.js', 'text/javascript; charset=utf-8'],
   '/board.js': ['public/board.js', 'text/javascript; charset=utf-8'],
   '/sounds.js': ['public/sounds.js', 'text/javascript; charset=utf-8'],
+  '/loudness.js': ['public/loudness.js', 'text/javascript; charset=utf-8'],
   '/style.css': ['public/style.css', 'text/css; charset=utf-8'],
   '/preview.html': ['public/preview.html', 'text/html; charset=utf-8'],
   '/preview.js': ['public/preview.js', 'text/javascript; charset=utf-8'],
