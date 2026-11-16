@@ -68,6 +68,11 @@ html.zoom-locked { touch-action: pan-x pan-y; }
   -webkit-user-select: text;
   user-select: text;
 }
+/* 大廳和結算沒有標題，上方間距加到 container 預設的三倍 */
+.screen[data-screen="lobby"],
+.screen[data-screen="finished"] {
+  padding-top: calc(var(--space-3) * 2);
+}
 
 .topbar {
   display: flex;
@@ -211,4 +216,4 @@ body.is-host .guest-only { display: none; }
 }
 .result.is-match { color: var(--color-match); }
 
-.score { font-size: var(--font-size-question); font-weight: 700; }
+.score { margin-top: 0; font-size: var(--font-size-question); font-weight: 700; }
