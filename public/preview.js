@@ -65,6 +65,7 @@ export const FLOW_KEY = 'flow';
 
 export const PREVIEWS = {
   connecting: { label: '連線中', screen: 'connecting' },
+  home: { label: '首頁（開房間／輸入房號）', screen: 'home' },
   join: {
     label: '加入遊戲',
     build: (role) => makeState(role, { you: { id: 'x', joined: false, isHost: false, answer: null } }),
@@ -318,7 +319,7 @@ function startFlow(role, app) {
  */
 export function startPreview(key, role, app) {
   const normalizedRole = role === 'guest' ? 'guest' : 'host';
-  app.setInvite('http://192.168.0.10:3000', fakeDrawing('QR code', 240, 240));
+  app.setInvite('K7QX', 'http://192.168.0.10:3000/?room=K7QX', fakeDrawing('QR code', 240, 240));
 
   if (key === FLOW_KEY) {
     startFlow(normalizedRole, app);

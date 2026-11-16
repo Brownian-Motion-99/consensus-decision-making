@@ -6,10 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { WebSocketServer } from 'ws';
 import QRCode from 'qrcode';
-import { Room } from './src/game.js';
+import { RoomRegistry } from './src/rooms.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
+// 預設只接受本機連線（改畫面時用）；LAN=1 才開放同一個區網的裝置連進來
+const LAN = process.env.LAN === '1';
 const HEARTBEAT_MS = 10_000;
 
 // 只提供這幾個檔案，避免路徑穿越。路徑相對於專案根目錄
@@ -44,9 +46,14 @@ function lanAddress() {
 }
 
 const questions = JSON.parse(await readFile(join(ROOT, 'questions.json'), 'utf8'));
-const room = new Room({ questions });
-const joinUrl = `http://${lanAddress()}:${PORT}`;
-const qrDataUrl = await QRCode.toDataURL(joinUrl, { margin: 1, width: 240 });
+const baseUrl = `http://${LAN ? lanAddress() : 'localhost'}:${PORT}`;
+const rooms = new RoomRegistry({
+  questions,
+  makeInvite: async (code) => {
+    const joinUrl = `${baseUrl}/?room=${code}`;
+    return { joinUrl, qrDataUrl: await QRCode.toDataURL(joinUrl, { margin: 1, width: 240 }) };
+  },
+});
 
 const http = createServer(async (req, res) => {
   const path = new URL(req.url, 'http://x').pathname;
@@ -67,73 +74,80 @@ const http = createServer(async (req, res) => {
 });
 
 const wss = new WebSocketServer({ server: http, maxPayload: 256 * 1024 });
-const clients = new Map(); // ws -> playerId
+const sockets = new Set();
 
 function send(ws, msg) {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
 }
 
-function broadcastState() {
-  for (const [ws, id] of clients) send(ws, { type: 'state', state: room.viewFor(id) });
-}
-
-function broadcastNotice(message) {
-  for (const ws of clients.keys()) send(ws, { type: 'notice', message });
-}
-
-const handlers = {
-  join: (id, msg) => room.join(id, msg.name),
-  setTargetMatches: (id, msg) => room.setTargetMatches(id, msg.count),
-  start: (id) => room.start(id),
-  answer: (id, msg) => room.answer(id, msg.image),
-  reveal: (id) => room.reveal(id),
-  judge: (id, msg) => room.judge(id, msg.match),
-  next: (id) => room.next(id),
-  backToLobby: (id) => room.backToLobby(id),
-};
-
 wss.on('connection', (ws) => {
   const id = randomUUID();
-  clients.set(ws, id);
+  let session = null; // 這條連線所在的房間，開房或輸入房號之後才有
+  let creating = false;
+  sockets.add(ws);
   ws.isAlive = true;
   ws.on('pong', () => {
     ws.isAlive = true;
   });
 
-  send(ws, { type: 'welcome', joinUrl, qrDataUrl });
-  send(ws, { type: 'state', state: room.viewFor(id) });
+  // 還沒進房間時只能開房或輸入房號
+  const entryHandlers = {
+    async create() {
+      creating = true;
+      try {
+        const { session: created, error } = await rooms.create();
+        if (error) return error;
+        // 產生 QR code 的期間連線可能已經斷了
+        if (ws.readyState !== ws.OPEN) {
+          rooms.release(created);
+          return null;
+        }
+        session = created;
+        session.attach(ws, id, { owner: true });
+        return null;
+      } finally {
+        creating = false;
+      }
+    },
+    enter(msg) {
+      const found = rooms.get(msg.code);
+      if (!found) return `找不到房號「${String(msg.code ?? '').trim().slice(0, 8)}」`;
+      session = found;
+      session.attach(ws, id);
+      return null;
+    },
+  };
 
-  ws.on('message', (raw) => {
+  ws.on('message', async (raw) => {
     let msg;
     try {
       msg = JSON.parse(raw);
     } catch {
       return send(ws, { type: 'error', message: '訊息格式錯誤' });
     }
-    const handler = handlers[msg?.type];
-    if (!handler) return send(ws, { type: 'error', message: '未知的操作' });
-    const error = handler(id, msg);
-    if (error) return send(ws, { type: 'error', message: error });
-    broadcastState();
+    let error;
+    if (session) {
+      error = entryHandlers[msg?.type] ? '你已經在房間裡了' : session.handle(ws, msg);
+    } else if (creating) {
+      error = '正在開房間，請稍候';
+    } else {
+      const handler = entryHandlers[msg?.type];
+      error = handler ? await handler(msg) : '請先開房間或輸入房號';
+    }
+    if (error) send(ws, { type: 'error', message: error });
   });
 
   ws.on('close', () => {
-    clients.delete(ws);
-    const player = room.players.get(id);
-    if (!player) return;
-    const wasInGame = room.inGame();
-    const newHostId = room.leave(id);
-    const notices = [`${player.name} 離線了`];
-    if (newHostId) notices.push(`新主持人是 ${room.players.get(newHostId).name}`);
-    if (wasInGame && room.phase === 'finished') notices.push('人數不足，直接進入結算');
-    broadcastNotice(notices.join('，'));
-    broadcastState();
+    sockets.delete(ws);
+    if (!session) return;
+    session.detach(ws);
+    rooms.release(session);
   });
 });
 
 // 手機鎖螢幕時連線常常不會正常關閉，定期 ping 來偵測
 setInterval(() => {
-  for (const ws of clients.keys()) {
+  for (const ws of sockets) {
     if (!ws.isAlive) {
       ws.terminate();
       continue;
@@ -143,9 +157,13 @@ setInterval(() => {
   }
 }, HEARTBEAT_MS);
 
-http.listen(PORT, '0.0.0.0', async () => {
+http.listen(PORT, LAN ? '0.0.0.0' : '127.0.0.1', async () => {
   console.log('默契一致 server 已啟動');
   console.log(`本機：http://localhost:${PORT}`);
-  console.log(`區網：${joinUrl}`);
-  console.log(await QRCode.toString(joinUrl, { type: 'terminal', small: true }));
+  if (!LAN) {
+    console.log('只接受本機連線，要讓手機連進來請用 npm run start:lan');
+    return;
+  }
+  console.log(`區網：${baseUrl}`);
+  console.log(await QRCode.toString(baseUrl, { type: 'terminal', small: true }));
 });

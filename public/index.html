@@ -20,9 +20,22 @@
       <p class="muted">連線中…</p>
     </section>
 
+    <!-- 首頁：開房間或輸入房號 -->
+    <section class="screen" data-screen="home" hidden>
+      <button type="button" id="create-btn" class="btn btn-primary">開新房間</button>
+      <p class="divider muted">或是加入朋友的房間</p>
+      <form id="enter-form" class="stack">
+        <label for="code-input">房號</label>
+        <input id="code-input" class="code-input" autocomplete="off" autocapitalize="characters"
+          spellcheck="false" maxlength="4" required>
+        <button type="submit" class="btn">加入房間</button>
+      </form>
+    </section>
+
     <!-- 加入 -->
     <section class="screen" data-screen="join" hidden>
-      <h2>加入遊戲</h2>
+      <h2>房號 <span class="room-code" id="join-code"></span></h2>
+      <p class="muted" id="join-hint" hidden>房間開好了！取個暱稱，你就是這間房的主持人。</p>
       <form id="join-form" class="stack">
         <label for="name-input">暱稱</label>
         <input id="name-input" autocomplete="off" required>
@@ -34,13 +47,15 @@
     <section class="screen" data-screen="locked" hidden>
       <h2>遊戲進行中</h2>
       <p class="muted">這局結束、回到大廳之後就可以加入。</p>
+      <a class="btn" href="/">回首頁</a>
     </section>
 
     <!-- 大廳 -->
     <section class="screen" data-screen="lobby" hidden>
       <div class="invite">
+        <p class="room-code-line">房號 <span class="room-code" id="room-code"></span></p>
         <img id="qr" alt="加入遊戲的 QR code">
-        <p class="muted">用手機掃描，或在瀏覽器輸入</p>
+        <p class="muted">用手機掃描，或在首頁輸入房號，也可以開啟</p>
         <p class="url" id="join-url"></p>
       </div>
       <h3>玩家 <span id="lobby-count"></span></h3>
@@ -112,7 +127,10 @@
     <section class="screen" data-screen="disconnected" hidden>
       <h2>連線中斷</h2>
       <p class="muted">目前不支援重新連線，請重新整理頁面，等下一局再加入。</p>
-      <button class="btn" id="reload-btn">重新整理</button>
+      <div class="row">
+        <a class="btn" href="/">回首頁</a>
+        <button class="btn btn-primary" id="reload-btn">重新整理</button>
+      </div>
     </section>
   </main>
 

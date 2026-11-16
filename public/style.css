@@ -68,7 +68,8 @@ html.zoom-locked { touch-action: pan-x pan-y; }
   -webkit-user-select: text;
   user-select: text;
 }
-/* 大廳和結算沒有標題，上方間距加到 container 預設的三倍 */
+/* 首頁、大廳和結算沒有標題，上方間距加到 container 預設的三倍 */
+.screen[data-screen="home"],
 .screen[data-screen="lobby"],
 .screen[data-screen="finished"] {
   padding-top: calc(var(--space-3) * 2);
@@ -135,6 +136,25 @@ input::placeholder { color: var(--color-input-placeholder); }
   border-color: var(--color-primary);
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+a.btn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+
+/* 房號：大寫等寬，方便口頭唸給別人聽 */
+.room-code {
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+.room-code-line { margin: 0 0 var(--space-3); font-size: var(--font-size-question); }
+.code-input {
+  font-family: ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+}
+.divider { margin: var(--space-4) 0 var(--space-3); text-align: center; }
 .host-only { margin-top: var(--space-4); }
 
 /* 主持人／一般玩家各自才看得到的區塊 */

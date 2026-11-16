@@ -15,19 +15,37 @@ let state = null;
 let lastQuestionNumber = null;
 let noticeTimer = null;
 
+const params = new URLSearchParams(location.search);
+
 function connect() {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(`${protocol}//${location.host}`);
 
+  // 網址帶房號（掃 QR code 進來）就直接進房，否則顯示首頁
+  ws.addEventListener('open', () => {
+    const code = params.get('room');
+    if (code) sendAction('enter', { code });
+    else showScreen('home');
+  });
+
   ws.addEventListener('message', (event) => {
     const msg = JSON.parse(event.data);
     if (msg.type === 'welcome') {
-      $('qr').src = msg.qrDataUrl;
-      $('join-url').textContent = msg.joinUrl;
+      setInvite(msg.code, msg.joinUrl, msg.qrDataUrl);
+      $('join-hint').hidden = !msg.owner;
+      // 網址換成這間房，方便直接複製分享
+      history.replaceState(null, '', `/?room=${msg.code}`);
     } else if (msg.type === 'state') {
       applyState(msg.state);
     } else if (msg.type === 'error' || msg.type === 'notice') {
       showNotice(msg.message, msg.type === 'error');
+      // 還沒進房間時的錯誤（找不到房號、房間數滿了）回到首頁
+      if (msg.type === 'error' && !state) {
+        $('code-input').value = params.get('room') ?? $('code-input').value;
+        history.replaceState(null, '', '/');
+        params.delete('room');
+        showScreen('home');
+      }
     }
   });
 
@@ -40,6 +58,13 @@ function applyState(next) {
   state = next;
   render();
   playTransitionSound(prev, state);
+}
+
+function setInvite(code, url, qr) {
+  $('room-code').textContent = code;
+  $('join-code').textContent = code;
+  $('join-url').textContent = url;
+  $('qr').src = qr;
 }
 
 function sendAction(type, payload = {}) {
@@ -233,6 +258,13 @@ function renderFinished() {
 
 // ---- 事件 ----
 
+$('create-btn').addEventListener('click', () => sendAction('create'));
+
+$('enter-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  sendAction('enter', { code: $('code-input').value });
+});
+
 $('join-form').addEventListener('submit', (e) => {
   e.preventDefault();
   sendAction('join', { name: $('name-input').value });
@@ -295,16 +327,12 @@ loadSounds({
   congrats: '/audio/congrats.mp3',
 });
 
-const params = new URLSearchParams(location.search);
 if (params.has('preview')) {
   previewMode = true;
   const { startPreview } = await import('./preview.js');
   const found = startPreview(params.get('preview'), params.get('as'), {
     applyState,
-    setInvite: (url, qr) => {
-      $('join-url').textContent = url;
-      $('qr').src = qr;
-    },
+    setInvite,
     showScreen,
     showNotice,
   });

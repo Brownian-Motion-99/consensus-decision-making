@@ -6,10 +6,13 @@
 
 ```sh
 npm install
-npm start          # 預設 port 3000，可用 PORT=xxxx npm start 修改
+npm start          # 只接受本機連線，預設 port 3000，可用 PORT=xxxx npm start 修改
+npm run start:lan  # 開放同一個區網的裝置連進來
 ```
 
-終端機會印出區網網址和 QR code。主持人電腦和玩家手機要連同一個 Wi-Fi，用瀏覽器開啟網址加入。第一個加入的人是主持人。
+`npm start` 只聽 `127.0.0.1`，外部裝置連不進來，適合單機改畫面。要用手機玩時改用 `npm run start:lan`，終端機會印出區網網址和 QR code。主持人電腦和玩家手機要連同一個 Wi-Fi，用瀏覽器開啟網址。
+
+在首頁按「開新房間」，再取暱稱加入，開房的人就是主持人。其他人掃大廳的 QR code（網址會帶 `?room=房號`），或在首頁輸入 4 碼房號，進房後再取暱稱。一台 server 可以同時開多間房（上限 100 間），房間只能靠房號進入，最後一個人離開就會自動收掉。
 
 ## 畫面預覽（細修版面用）
 
@@ -31,7 +34,8 @@ npm test
 ## 檔案
 
 - `src/game.js`：遊戲狀態機（唯一的權威狀態）
-- `server.js`：HTTP 靜態檔案 + WebSocket
+- `src/rooms.js`：多房間。`RoomSession` 是一間房（遊戲狀態＋連線＋廣播），`RoomRegistry` 用房號管理所有房間
+- `server.js`：HTTP 靜態檔案 + WebSocket，連線先開房或輸入房號，之後的操作交給所在的房間
 - `public/`：前端骨架，樣式變數集中在 `style.css` 的 `:root`
 - `questions.json`：題庫
 - `PLAN.md`：產品設計與架構規劃

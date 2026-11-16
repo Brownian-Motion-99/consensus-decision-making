@@ -39,7 +39,8 @@ export class Room {
 
   // ---- 玩家進出 ----
 
-  join(id, rawName) {
+  /** asHost：開房的人晚一步取暱稱，加入時仍然拿回主持人。 */
+  join(id, rawName, { asHost = false } = {}) {
     if (this.phase !== 'lobby') return '遊戲進行中，目前無法加入';
     if (this.players.has(id)) return '你已經在房間裡了';
     if (this.players.size >= MAX_PLAYERS) return `房間已滿（最多 ${MAX_PLAYERS} 人）`;
@@ -47,7 +48,7 @@ export class Room {
     if (!name) return '請輸入暱稱';
     if ([...name].length > MAX_NAME_LENGTH) return `暱稱最多 ${MAX_NAME_LENGTH} 個字`;
     this.players.set(id, { id, name });
-    if (!this.hostId) this.hostId = id;
+    if (!this.hostId || asHost) this.hostId = id;
     return null;
   }
 
