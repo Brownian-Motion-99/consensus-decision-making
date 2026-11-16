@@ -1,0 +1,39 @@
+# 外網連線：遊戲 server 關在不能上網的容器裡，只有 cloudflared 連得到它。
+# 用法見 README 的「外網連線」。
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  restart: unless-stopped
+
+services:
+  app:
+    <<: *hardening
+    build: .
+    user: node
+    environment:
+      HOST: 0.0.0.0
+      TRUST_PROXY: '1'
+      MAX_ROOMS: '20'
+    mem_limit: 256m
+    cpus: 1
+    pids_limit: 64
+    networks: [sandbox]
+    # 刻意不設 ports：本機不開任何 port，也不掛載任何資料夾
+
+  tunnel:
+    <<: *hardening
+    image: cloudflare/cloudflared:2026.11.0
+    command: tunnel --no-autoupdate --url http://app:3000
+    tmpfs: [/tmp]
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 64
+    depends_on: [app]
+    networks: [sandbox, egress]
+
+networks:
+  sandbox:
+    internal: true # 這個網路連不到外面
+  egress: {}

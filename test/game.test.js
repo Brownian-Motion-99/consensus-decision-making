@@ -24,8 +24,8 @@ test('第一個加入的人是主持人', () => {
 test('加入的限制：空白、人數上限、遊戲中', () => {
   const room = setup(['A']);
   assert.match(room.join('x', '  '), /暱稱/);
-  for (const n of ['B', 'C', 'D', 'E', 'F']) assert.equal(room.join(n, n), null);
-  assert.match(room.join('G', 'G'), /已滿/);
+  for (const n of ['B', 'C', 'D', 'E', 'F', 'G', 'H']) assert.equal(room.join(n, n), null);
+  assert.match(room.join('I', 'I'), /已滿/);
 
   const room2 = setup(['A', 'B']);
   room2.start('A');

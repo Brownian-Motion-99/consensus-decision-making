@@ -2,7 +2,7 @@
 // 這裡是唯一的權威狀態，不碰網路，方便測試。
 
 export const MIN_PLAYERS = 2;
-export const MAX_PLAYERS = 6;
+export const MAX_PLAYERS = 8;
 export const MIN_TARGET = 1;
 export const MAX_TARGET = 99;
 export const DEFAULT_TARGET = 3;

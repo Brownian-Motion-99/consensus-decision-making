@@ -6,13 +6,23 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { WebSocketServer } from 'ws';
 import QRCode from 'qrcode';
-import { RoomRegistry } from './src/rooms.js';
+import { RoomRegistry, MAX_ROOMS } from './src/rooms.js';
+import { RateLimiter, ConnectionCounter } from './src/limits.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
 // 預設只接受本機連線（改畫面時用）；LAN=1 才開放同一個區網的裝置連進來
 const LAN = process.env.LAN === '1';
+// 容器裡要聽 0.0.0.0 才連得到，用 HOST 直接指定
+const HOST = process.env.HOST || (LAN ? '0.0.0.0' : '127.0.0.1');
+// 只有在 Cloudflare Tunnel 後面才信任它帶的玩家 IP，否則 header 可以被偽造
+const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const HEARTBEAT_MS = 10_000;
+
+// 開放到外網時擋洗頻用，正常遊玩遠低於這些數字
+const connections = new ConnectionCounter({ total: 200, perKey: 20 });
+const createLimiter = new RateLimiter({ limit: 5, windowMs: 60_000 });
+const MESSAGES_PER_SECOND = 20;
 
 // 只提供這幾個檔案，避免路徑穿越。路徑相對於專案根目錄
 const STATIC_FILES = {
@@ -48,7 +58,16 @@ function lanAddress() {
 
 const questions = JSON.parse(await readFile(join(ROOT, 'questions.json'), 'utf8'));
 const baseUrl = `http://${LAN ? lanAddress() : 'localhost'}:${PORT}`;
-const rooms = new RoomRegistry({ questions, joinUrlFor: (code) => `${baseUrl}/?room=${code}` });
+const rooms = new RoomRegistry({
+  questions,
+  joinUrlFor: (code) => `${baseUrl}/?room=${code}`,
+  maxRooms: Number(process.env.MAX_ROOMS) || MAX_ROOMS,
+});
+
+function clientIp(req) {
+  const forwarded = TRUST_PROXY ? req.headers['cf-connecting-ip'] : undefined;
+  return (typeof forwarded === 'string' && forwarded) || req.socket.remoteAddress || 'unknown';
+}
 
 const http = createServer(async (req, res) => {
   const path = new URL(req.url, 'http://x').pathname;
@@ -60,7 +79,11 @@ const http = createServer(async (req, res) => {
   }
   try {
     const body = await readFile(join(ROOT, entry[0]));
-    res.writeHead(200, { 'Content-Type': entry[1], 'Cache-Control': 'no-cache' });
+    res.writeHead(200, {
+      'Content-Type': entry[1],
+      'Cache-Control': 'no-cache',
+      'X-Content-Type-Options': 'nosniff',
+    });
     res.end(body);
   } catch {
     res.writeHead(500);
@@ -75,8 +98,14 @@ function send(ws, msg) {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
 }
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+  const ip = clientIp(req);
+  if (!connections.acquire(ip)) {
+    ws.close(1013, 'Too many connections');
+    return;
+  }
   const id = randomUUID();
+  const messageLimiter = new RateLimiter({ limit: MESSAGES_PER_SECOND, windowMs: 1000 });
   let session = null; // 這條連線所在的房間，開房或輸入房號之後才有
   sockets.add(ws);
   ws.isAlive = true;
@@ -87,6 +116,7 @@ wss.on('connection', (ws) => {
   // 還沒進房間時只能開房或輸入房號
   const entryHandlers = {
     create() {
+      if (!createLimiter.hit(ip)) return '開房太頻繁，請稍後再試';
       const { session: created, error } = rooms.create();
       if (error) return error;
       session = created;
@@ -103,6 +133,7 @@ wss.on('connection', (ws) => {
   };
 
   ws.on('message', (raw) => {
+    if (!messageLimiter.hit(id)) return send(ws, { type: 'error', message: '操作太頻繁，請稍後再試' });
     let msg;
     try {
       msg = JSON.parse(raw);
@@ -121,6 +152,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     sockets.delete(ws);
+    connections.release(ip);
     if (!session) return;
     session.detach(ws);
     rooms.release(session);
@@ -139,8 +171,12 @@ setInterval(() => {
   }
 }, HEARTBEAT_MS);
 
-http.listen(PORT, LAN ? '0.0.0.0' : '127.0.0.1', async () => {
+http.listen(PORT, HOST, async () => {
   console.log('默契一致 server 已啟動');
+  if (process.env.HOST) {
+    console.log(`監聽 ${HOST}:${PORT}`);
+    return;
+  }
   console.log(`本機：http://localhost:${PORT}`);
   if (!LAN) {
     console.log('只接受本機連線，要讓手機連進來請用 npm run start:lan');

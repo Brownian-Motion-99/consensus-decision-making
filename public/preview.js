@@ -7,7 +7,7 @@ import { watchTweaks } from './tweaks.js';
 
 const LIMITS = {
   minPlayers: 2,
-  maxPlayers: 6,
+  maxPlayers: 8,
   minTarget: 1,
   maxTarget: 99,
   maxNameLength: 12,

@@ -64,7 +64,12 @@ function applyState(next) {
 
 let invite = { code: '', url: '' };
 
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
 function setInvite(code, url) {
+  // 從外網（tunnel）或區網 IP 連進來時，用瀏覽器的網址產生連結最可靠；
+  // 只有主持人用 localhost 開時，才用 server 給的區網連結
+  if (!LOOPBACK_HOSTS.has(location.hostname)) url = `${location.origin}/?room=${code}`;
   invite = { code, url };
   $('room-code').textContent = code;
 }
