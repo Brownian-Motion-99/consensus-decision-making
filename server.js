@@ -27,6 +27,7 @@ const STATIC_FILES = {
   '/preview-desktop.html': ['public/preview-desktop.html', 'text/html; charset=utf-8'],
   '/preview-gallery.js': ['public/preview-gallery.js', 'text/javascript; charset=utf-8'],
   '/preview.css': ['public/preview.css', 'text/css; charset=utf-8'],
+  '/tweaks.js': ['public/tweaks.js', 'text/javascript; charset=utf-8'],
   '/audio/correct.mp3': ['audio/correct.mp3', 'audio/mpeg'],
   '/audio/wrong.mp3': ['audio/wrong.mp3', 'audio/mpeg'],
   '/audio/congrats.mp3': ['audio/congrats.mp3', 'audio/mpeg'],
@@ -47,13 +48,7 @@ function lanAddress() {
 
 const questions = JSON.parse(await readFile(join(ROOT, 'questions.json'), 'utf8'));
 const baseUrl = `http://${LAN ? lanAddress() : 'localhost'}:${PORT}`;
-const rooms = new RoomRegistry({
-  questions,
-  makeInvite: async (code) => {
-    const joinUrl = `${baseUrl}/?room=${code}`;
-    return { joinUrl, qrDataUrl: await QRCode.toDataURL(joinUrl, { margin: 1, width: 240 }) };
-  },
-});
+const rooms = new RoomRegistry({ questions, joinUrlFor: (code) => `${baseUrl}/?room=${code}` });
 
 const http = createServer(async (req, res) => {
   const path = new URL(req.url, 'http://x').pathname;
@@ -83,7 +78,6 @@ function send(ws, msg) {
 wss.on('connection', (ws) => {
   const id = randomUUID();
   let session = null; // 這條連線所在的房間，開房或輸入房號之後才有
-  let creating = false;
   sockets.add(ws);
   ws.isAlive = true;
   ws.on('pong', () => {
@@ -92,22 +86,12 @@ wss.on('connection', (ws) => {
 
   // 還沒進房間時只能開房或輸入房號
   const entryHandlers = {
-    async create() {
-      creating = true;
-      try {
-        const { session: created, error } = await rooms.create();
-        if (error) return error;
-        // 產生 QR code 的期間連線可能已經斷了
-        if (ws.readyState !== ws.OPEN) {
-          rooms.release(created);
-          return null;
-        }
-        session = created;
-        session.attach(ws, id, { owner: true });
-        return null;
-      } finally {
-        creating = false;
-      }
+    create() {
+      const { session: created, error } = rooms.create();
+      if (error) return error;
+      session = created;
+      session.attach(ws, id, { owner: true });
+      return null;
     },
     enter(msg) {
       const found = rooms.get(msg.code);
@@ -118,7 +102,7 @@ wss.on('connection', (ws) => {
     },
   };
 
-  ws.on('message', async (raw) => {
+  ws.on('message', (raw) => {
     let msg;
     try {
       msg = JSON.parse(raw);
@@ -128,11 +112,9 @@ wss.on('connection', (ws) => {
     let error;
     if (session) {
       error = entryHandlers[msg?.type] ? '你已經在房間裡了' : session.handle(ws, msg);
-    } else if (creating) {
-      error = '正在開房間，請稍候';
     } else {
       const handler = entryHandlers[msg?.type];
-      error = handler ? await handler(msg) : '請先開房間或輸入房號';
+      error = handler ? handler(msg) : '請先開房間或輸入房號';
     }
     if (error) send(ws, { type: 'error', message: error });
   });

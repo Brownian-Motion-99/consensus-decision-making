@@ -3,6 +3,7 @@
 // 劇本模式：/?preview=flow&as=<host|guest>，依序切換狀態，可以看切換時的動畫和音效
 
 import { createBoard } from './board.js';
+import { watchTweaks } from './tweaks.js';
 
 const LIMITS = {
   minPlayers: 2,
@@ -318,8 +319,9 @@ function startFlow(role, app) {
  * @returns {boolean} 找不到這個預覽時回傳 false
  */
 export function startPreview(key, role, app) {
+  watchTweaks();
   const normalizedRole = role === 'guest' ? 'guest' : 'host';
-  app.setInvite('K7QX', 'http://192.168.0.10:3000/?room=K7QX', fakeDrawing('QR code', 240, 240));
+  app.setInvite('K7QX', 'http://192.168.0.10:3000/?room=K7QX');
 
   if (key === FLOW_KEY) {
     startFlow(normalizedRole, app);

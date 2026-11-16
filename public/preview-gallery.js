@@ -1,6 +1,7 @@
 // 預覽總覽頁的共用邏輯：手機版（preview.html）和電腦版（preview-desktop.html）只差在裝置尺寸。
 
 import { PREVIEWS, FLOW_KEY } from '/preview.js';
+import { initTweakPanel } from '/tweaks.js';
 
 /**
  * @param {object} opts
@@ -89,4 +90,5 @@ export function initGallery({ devices, defaultDevice, scales, defaultScale, stor
   }
 
   build();
+  initTweakPanel();
 }

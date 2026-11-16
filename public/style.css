@@ -12,7 +12,8 @@
   --color-error: #c0392b;
   --color-done: #2e8b57;
   --color-board: #ffffff;
-  --color-frame: #86bbd8; /* 白板與 QR code 的外框 */
+  --color-frame: #86bbd8; /* 白板的外框 */
+  --color-board-hint: #808080; /* 白板上提示可以寫字的鉛筆 */
   --frame-width: 4px;
   /* 輸入框：淺色、深色模式都固定白底黑字 */
   --color-input-bg: #ffffff;
@@ -53,6 +54,11 @@ body {
   font-size: var(--font-size-base);
   line-height: 1.5;
   -webkit-tap-highlight-color: transparent;
+  /* 讓 container 在畫面上下置中；內容比畫面高時從頂端開始排，不會被切掉 */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* 作答畫面才鎖縮放：只允許捲動，關掉雙擊和雙指縮放（iOS 另外由 viewport 和 JS 處理） */
@@ -68,33 +74,20 @@ html.zoom-locked { touch-action: pan-x pan-y; }
   -webkit-user-select: text;
   user-select: text;
 }
-/* 首頁、大廳和結算沒有標題，上方間距加到 container 預設的三倍 */
-.screen[data-screen="home"],
+/* 取暱稱、大廳和結算沒有標題，上方間距加到 container 預設的三倍 */
+.screen[data-screen="join"],
 .screen[data-screen="lobby"],
 .screen[data-screen="finished"] {
   padding-top: calc(var(--space-3) * 2);
 }
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  /* viewport-fit=cover 時避開瀏海、動態島和橫向時的左右圓角 */
-  padding-top: calc(var(--space-2) + env(safe-area-inset-top, 0px));
-  padding-left: calc(var(--space-3) + env(safe-area-inset-left, 0px));
-  padding-right: calc(var(--space-3) + env(safe-area-inset-right, 0px));
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-}
-.brand { margin: 0; font-size: 1.25rem; }
-.me { color: var(--color-muted); font-size: 0.9rem; }
-
 .container {
+  width: 100%;
   max-width: var(--max-width);
-  margin: 0 auto;
+  margin: auto;
   padding: var(--space-3);
+  /* viewport-fit=cover 時避開瀏海、動態島和橫向時的左右圓角 */
+  padding-top: calc(var(--space-3) + env(safe-area-inset-top, 0px));
   padding-left: calc(var(--space-3) + env(safe-area-inset-left, 0px));
   padding-right: calc(var(--space-3) + env(safe-area-inset-right, 0px));
   padding-bottom: calc(var(--bottom-bleed) + env(safe-area-inset-bottom, 0px));
@@ -148,37 +141,47 @@ a.btn {
   font-weight: 700;
   letter-spacing: 0.15em;
 }
-.room-code-line { margin: 0 0 var(--space-3); font-size: var(--font-size-question); }
+.room-code-line { margin: 0; font-size: var(--font-size-question); }
 .code-input {
   font-family: ui-monospace, monospace;
   text-transform: uppercase;
   letter-spacing: 0.3em;
 }
-.divider { margin: var(--space-4) 0 var(--space-3); text-align: center; }
 .host-only { margin-top: var(--space-4); }
 
 /* 主持人／一般玩家各自才看得到的區塊 */
 body:not(.is-host) .host-only { display: none; }
 body.is-host .guest-only { display: none; }
 
+/* 提示浮在畫面上方，不佔版面，出現或消失時下面的內容不會跟著移動 */
 .notice {
-  margin-bottom: var(--space-3);
+  position: fixed;
+  z-index: 10;
+  top: calc(var(--space-3) + env(safe-area-inset-top, 0px));
+  left: 50%;
+  width: calc(min(var(--max-width), 100vw) - 2 * var(--space-3));
+  transform: translateX(-50%);
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
 }
 .notice.is-error { color: var(--color-error); border-color: var(--color-error); }
 
-.invite { text-align: center; }
-.invite img {
-  width: 200px;
-  height: 200px;
-  background: #fff;
-  border: var(--frame-width) solid var(--color-frame);
-  border-radius: var(--radius);
+/* 房號和兩個複製按鈕排成一排，太窄時按鈕換到下一行 */
+.invite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2) var(--space-3);
 }
-.url { font-family: ui-monospace, monospace; word-break: break-all; }
+.btn-small {
+  width: auto;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.9rem;
+}
 
 .players, .answers { list-style: none; margin: 0; padding: 0; }
 .players li {
@@ -216,6 +219,18 @@ body.is-host .guest-only { display: none; }
   border-radius: var(--radius);
 }
 .board { touch-action: none; cursor: crosshair; -webkit-touch-callout: none; }
+.board-wrap { position: relative; }
+.board-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20%;
+  height: auto;
+  transform: translate(-50%, -50%);
+  color: var(--color-board-hint);
+  opacity: 0.4;
+  pointer-events: none; /* 點擊直接穿透到白板 */
+}
 
 .answers {
   display: grid;
@@ -237,3 +252,86 @@ body.is-host .guest-only { display: none; }
 .result.is-match { color: var(--color-match); }
 
 .score { margin-top: 0; font-size: var(--font-size-question); font-weight: 700; }
+
+/* 連線中：心跳放大。文字「咚咚」跳兩下，每一下從中心擴散兩圈波紋，1.3 秒一拍 */
+.heartbeat {
+  --beat: 1.3s;
+  --beat-second: 0.21s; /* 第二下「咚」開始放大的時間，對齊 heartbeat-text 的 16%（1.3s × 16%） */
+  /* 蓋住整個視窗，文字才會在畫面正中央，不受 container 的間距影響 */
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+.heartbeat-text {
+  position: relative;
+  /* 「連線中…」約 4 個字寬，字級取視窗寬度的 1/12，整行就佔畫面橫向的中間 1/3 */
+  font-size: calc(100vw / 12);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--color-primary);
+  animation: heartbeat-text var(--beat) ease-in-out infinite;
+}
+.heartbeat-ring {
+  /* 波紋跟著文字大小縮放：起點是文字寬度的一半，最大約畫面寬度的一半到三分之二 */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(100vw / 3);
+  height: calc(100vw / 3);
+  margin: calc(100vw / -6) 0 0 calc(100vw / -6);
+  border: 3px solid var(--color-frame);
+  border-radius: 50%;
+  opacity: 0;
+  animation: heartbeat-ring var(--beat) cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+/* 每一下兩圈：同時出發，一圈小一圈大 */
+.heartbeat-ring:nth-child(1) { --ring-scale: 1.4; }
+.heartbeat-ring:nth-child(2) { --ring-scale: 2; border-width: 2px; }
+.heartbeat-ring:nth-child(3) { --ring-scale: 1.4; animation-delay: var(--beat-second); }
+.heartbeat-ring:nth-child(4) { --ring-scale: 2; border-width: 2px; animation-delay: var(--beat-second); }
+
+@keyframes heartbeat-text {
+  0%, 40%, 100% { transform: scale(1); }
+  8% { transform: scale(1.2); }
+  16% { transform: scale(1); }
+  26% { transform: scale(1.15); }
+}
+@keyframes heartbeat-ring {
+  0% { transform: scale(0.5); opacity: 0.8; }
+  60%, 100% { transform: scale(var(--ring-scale)); opacity: 0; }
+}
+
+/* 系統設定減少動態時，只留下文字的淡入淡出 */
+@media (prefers-reduced-motion: reduce) {
+  .heartbeat-ring { display: none; }
+  .heartbeat-text { animation: heartbeat-fade 2s ease-in-out infinite; }
+  @keyframes heartbeat-fade {
+    50% { opacity: 0.5; }
+  }
+}
+
+/* 首頁：logo 區塊佔畫面垂直方向中間的 1/2，房號和按鈕放在下面 */
+.screen[data-screen="home"] {
+  /* 抵銷 container 的上方間距，logo 才會以整個畫面為準置中 */
+  margin-top: calc(-1 * (var(--space-3) + env(safe-area-inset-top, 0px)));
+}
+.logo {
+  display: grid;
+  place-items: center;
+  height: 50vh;
+  height: 50dvh;
+  margin: 25vh 0 var(--space-4);
+  margin-top: 25dvh;
+  border: 2px dashed var(--color-frame);
+  border-radius: var(--radius);
+}
+.logo-title {
+  margin: 0;
+  font-size: clamp(2.5rem, 12vw, 5rem);
+  color: var(--color-primary-text);
+  letter-spacing: 0.1em;
+}

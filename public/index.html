@@ -7,34 +7,39 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <h1 class="brand">默契一致</h1>
-    <div class="me" id="me" hidden></div>
-  </header>
-
   <main class="container">
     <div class="notice" id="notice" hidden></div>
 
     <!-- 連線中 -->
     <section class="screen" data-screen="connecting">
-      <p class="muted">連線中…</p>
+      <div class="heartbeat" role="status">
+        <span class="heartbeat-ring" aria-hidden="true"></span>
+        <span class="heartbeat-ring" aria-hidden="true"></span>
+        <span class="heartbeat-ring" aria-hidden="true"></span>
+        <span class="heartbeat-ring" aria-hidden="true"></span>
+        <span class="heartbeat-text">連線中…</span>
+      </div>
     </section>
 
     <!-- 首頁：開房間或輸入房號 -->
     <section class="screen" data-screen="home" hidden>
-      <button type="button" id="create-btn" class="btn btn-primary">開新房間</button>
-      <p class="divider muted">或是加入朋友的房間</p>
+      <!-- 之後放 logo 的位置 -->
+      <div class="logo">
+        <h1 class="logo-title">默契一致</h1>
+      </div>
       <form id="enter-form" class="stack">
-        <label for="code-input">房號</label>
         <input id="code-input" class="code-input" autocomplete="off" autocapitalize="characters"
-          spellcheck="false" maxlength="4" required>
-        <button type="submit" class="btn">加入房間</button>
+          spellcheck="false" maxlength="4" required placeholder="房號" aria-label="房號">
+        <div class="row">
+          <button type="button" id="create-btn" class="btn btn-primary">開新房間</button>
+          <button type="submit" class="btn">加入房間</button>
+        </div>
       </form>
+      </div>
     </section>
 
     <!-- 加入 -->
     <section class="screen" data-screen="join" hidden>
-      <h2>房號 <span class="room-code" id="join-code"></span></h2>
       <p class="muted" id="join-hint" hidden>房間開好了！取個暱稱，你就是這間房的主持人。</p>
       <form id="join-form" class="stack">
         <label for="name-input">暱稱</label>
@@ -54,9 +59,8 @@
     <section class="screen" data-screen="lobby" hidden>
       <div class="invite">
         <p class="room-code-line">房號 <span class="room-code" id="room-code"></span></p>
-        <img id="qr" alt="加入遊戲的 QR code">
-        <p class="muted">用手機掃描，或在首頁輸入房號，也可以開啟</p>
-        <p class="url" id="join-url"></p>
+        <button type="button" id="copy-code-btn" class="btn btn-small">複製房號</button>
+        <button type="button" id="copy-link-btn" class="btn btn-small">複製連結</button>
       </div>
       <h3>玩家 <span id="lobby-count"></span></h3>
       <ul class="players" id="lobby-players"></ul>
@@ -74,7 +78,16 @@
       <p class="progress" id="answer-progress"></p>
       <h2 class="question" id="answer-question"></h2>
       <div id="answer-form" class="stack">
-        <canvas id="board" class="board" width="600" height="400" aria-label="手寫答案的白板"></canvas>
+        <div class="board-wrap">
+          <canvas id="board" class="board" width="600" height="400" aria-label="手寫答案的白板"></canvas>
+          <!-- 提示白板可以寫字畫畫，白板有內容就隱藏；不畫在 canvas 上，所以不會進到送出的圖 -->
+          <svg class="board-hint" id="board-hint" viewBox="0 0 24 24" aria-hidden="true"
+            fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16.9 3.6a2 2 0 0 1 2.8 0l.7.7a2 2 0 0 1 0 2.8L8.5 19 3.5 20.5 5 15.5 16.9 3.6Z"/>
+            <path d="M15 5.5l3.5 3.5"/>
+            <path d="M5 15.5l3.5 3.5"/>
+          </svg>
+        </div>
         <form id="type-form">
           <input id="type-input" maxlength="30" autocomplete="off" enterkeyhint="done"
             placeholder="懶得寫字？打字也可以" aria-label="打字作答">
@@ -88,7 +101,8 @@
         <p class="muted">你的答案（已送出）</p>
         <img id="my-answer-img" class="drawing" alt="你的答案">
       </div>
-      <div class="guest-only">
+      <!-- 送出答案之後才顯示作答進度，主持人和一般玩家都一樣 -->
+      <div id="answer-status" hidden>
         <h3>作答進度 <span id="answered-count"></span></h3>
         <ul class="players" id="answer-players"></ul>
       </div>

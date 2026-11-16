@@ -3,7 +3,13 @@
 
 export function createBoard(
   canvas,
-  { lineWidth = 8, color = '#111111', background = '#ffffff', fontFamily = 'sans-serif' } = {},
+  {
+    lineWidth = 8,
+    color = '#111111',
+    background = '#ffffff',
+    fontFamily = 'sans-serif',
+    onChange = () => {}, // 內容變動時呼叫，參數是白板是否為空
+  } = {},
 ) {
   const ctx = canvas.getContext('2d');
   // 手寫筆畫存在離屏 canvas（透明底），重畫時疊到文字上面
@@ -16,6 +22,15 @@ export function createBoard(
   let last = null;
   let hasInk = false;
   let text = '';
+  let wasEmpty = true;
+
+  // 空白／有內容切換時才通知，畫線時不會每一筆都觸發
+  function notify() {
+    const empty = !hasInk && !text;
+    if (empty === wasEmpty) return;
+    wasEmpty = empty;
+    onChange(empty);
+  }
 
   // ---- 合成 ----
 
@@ -111,6 +126,7 @@ export function createBoard(
       c.fill();
     });
     hasInk = true;
+    notify();
   });
 
   canvas.addEventListener('pointermove', (e) => {
@@ -134,6 +150,7 @@ export function createBoard(
     hasInk = false;
     text = '';
     redraw();
+    notify();
   }
 
   /** 更新文字層，手寫筆畫保留。 */
@@ -142,6 +159,7 @@ export function createBoard(
     if (next === text) return;
     text = next;
     redraw();
+    notify();
   }
 
   redraw();

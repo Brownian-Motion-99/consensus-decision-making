@@ -7,6 +7,8 @@ import { loadSounds, playSound, stopSound } from './sounds.js';
 const $ = (id) => document.getElementById(id);
 const board = createBoard($('board'), {
   fontFamily: getComputedStyle(document.body).fontFamily,
+  // SVG 沒有 hidden 屬性可以直接設，要改 attribute
+  onChange: (empty) => $('board-hint').toggleAttribute('hidden', !empty),
 });
 
 let ws;
@@ -31,7 +33,7 @@ function connect() {
   ws.addEventListener('message', (event) => {
     const msg = JSON.parse(event.data);
     if (msg.type === 'welcome') {
-      setInvite(msg.code, msg.joinUrl, msg.qrDataUrl);
+      setInvite(msg.code, msg.joinUrl);
       $('join-hint').hidden = !msg.owner;
       // 網址換成這間房，方便直接複製分享
       history.replaceState(null, '', `/?room=${msg.code}`);
@@ -60,11 +62,30 @@ function applyState(next) {
   playTransitionSound(prev, state);
 }
 
-function setInvite(code, url, qr) {
+let invite = { code: '', url: '' };
+
+function setInvite(code, url) {
+  invite = { code, url };
   $('room-code').textContent = code;
-  $('join-code').textContent = code;
-  $('join-url').textContent = url;
-  $('qr').src = qr;
+}
+
+async function copyText(text, label) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // 區網用 http 連線不是安全環境，沒有 clipboard API，改用舊方法
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.append(area);
+    area.select();
+    const ok = document.execCommand('copy');
+    area.remove();
+    if (!ok) return showNotice(`無法複製，請手動輸入：${text}`, true);
+  }
+  showNotice(`已複製${label}`, false);
 }
 
 function sendAction(type, payload = {}) {
@@ -157,12 +178,8 @@ function playTransitionSound(prev, next) {
 // ---- 各畫面 ----
 
 function render() {
-  const { phase, you, players } = state;
+  const { phase, you } = state;
   document.body.classList.toggle('is-host', you.isHost);
-
-  const me = players.find((p) => p.id === you.id);
-  $('me').hidden = !me;
-  $('me').textContent = me ? (you.isHost ? `${me.name}（主持人）` : me.name) : '';
 
   if (!you.joined) {
     if (phase === 'lobby') {
@@ -216,6 +233,7 @@ function renderAnswering() {
     $('my-answer-img').src = you.answer;
   }
 
+  $('answer-status').hidden = !you.answer;
   const done = players.filter((p) => p.answered).length;
   $('answered-count').textContent = `${done} / ${players.length}`;
   renderPlayers($('answer-players'), players, { showAnswered: true });
@@ -282,6 +300,8 @@ $('target-input').addEventListener('change', (e) => {
 });
 
 $('start-btn').addEventListener('click', () => sendAction('start'));
+$('copy-code-btn').addEventListener('click', () => copyText(invite.code, '房號'));
+$('copy-link-btn').addEventListener('click', () => copyText(invite.url, '連結'));
 
 function clearAnswer() {
   board.clear();

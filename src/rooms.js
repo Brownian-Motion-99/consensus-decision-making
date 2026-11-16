@@ -21,12 +21,12 @@ export class RoomSession {
    * @param {object} opts
    * @param {string} opts.code 房號
    * @param {string[]} opts.questions
-   * @param {{ joinUrl: string, qrDataUrl: string }} opts.invite 這間房的邀請連結和 QR code
+   * @param {string} opts.joinUrl 這間房的邀請連結
    * @param {() => number} [opts.random]
    */
-  constructor({ code, questions, invite, random }) {
+  constructor({ code, questions, joinUrl, random }) {
     this.code = code;
-    this.invite = invite;
+    this.joinUrl = joinUrl;
     this.room = new Room({ questions, random });
     this.clients = new Map(); // ws -> playerId（還沒加入的旁觀者也在這裡，加入後才是玩家）
     this.ownerId = null; // 開房的人，取好暱稱加入後就是主持人
@@ -39,7 +39,7 @@ export class RoomSession {
   attach(ws, id, { owner = false } = {}) {
     this.clients.set(ws, id);
     if (owner) this.ownerId = id;
-    send(ws, { type: 'welcome', code: this.code, owner, ...this.invite });
+    send(ws, { type: 'welcome', code: this.code, owner, joinUrl: this.joinUrl });
     send(ws, { type: 'state', state: this.room.viewFor(id) });
   }
 
@@ -92,17 +92,16 @@ export class RoomRegistry {
   /**
    * @param {object} opts
    * @param {string[]} opts.questions
-   * @param {(code: string) => Promise<{ joinUrl: string, qrDataUrl: string }>} opts.makeInvite
+   * @param {(code: string) => string} opts.joinUrlFor 用房號產生邀請連結
    * @param {number} [opts.maxRooms]
    * @param {() => number} [opts.random]
    */
-  constructor({ questions, makeInvite, maxRooms = MAX_ROOMS, random = Math.random }) {
+  constructor({ questions, joinUrlFor, maxRooms = MAX_ROOMS, random = Math.random }) {
     this.questions = questions;
-    this.makeInvite = makeInvite;
+    this.joinUrlFor = joinUrlFor;
     this.maxRooms = maxRooms;
     this.random = random;
     this.sessions = new Map(); // code -> RoomSession
-    this.reserved = new Set(); // 正在產生 QR code、還沒放進 sessions 的房號
   }
 
   get(rawCode) {
@@ -110,20 +109,13 @@ export class RoomRegistry {
   }
 
   /** 開一間新房間。回傳 { session } 或 { error }。 */
-  async create() {
-    if (this.sessions.size + this.reserved.size >= this.maxRooms) {
-      return { error: '目前房間數已達上限，請稍後再試' };
-    }
+  create() {
+    if (this.sessions.size >= this.maxRooms) return { error: '目前房間數已達上限，請稍後再試' };
     const code = this.uniqueCode();
-    this.reserved.add(code);
-    try {
-      const invite = await this.makeInvite(code);
-      const session = new RoomSession({ code, questions: this.questions, invite, random: this.random });
-      this.sessions.set(code, session);
-      return { session };
-    } finally {
-      this.reserved.delete(code);
-    }
+    const joinUrl = this.joinUrlFor(code);
+    const session = new RoomSession({ code, questions: this.questions, joinUrl, random: this.random });
+    this.sessions.set(code, session);
+    return { session };
   }
 
   /** 最後一條連線離開時呼叫，把空房間收掉。 */
@@ -138,7 +130,7 @@ export class RoomRegistry {
       for (let i = 0; i < CODE_LENGTH; i++) {
         code += CODE_ALPHABET[Math.floor(this.random() * CODE_ALPHABET.length)];
       }
-      if (!this.sessions.has(code) && !this.reserved.has(code)) return code;
+      if (!this.sessions.has(code)) return code;
     }
   }
 }
