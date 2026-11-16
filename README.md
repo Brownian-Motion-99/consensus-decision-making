@@ -63,4 +63,4 @@ npm test
 - `Dockerfile`、`docker-compose.yml`、`scripts/tunnel-url.js`：外網連線用的容器與 tunnel
 - `public/`：前端骨架，樣式變數集中在 `style.css` 的 `:root`
 - `questions.json`：題庫
-- `PLAN.md`：產品設計與架構規劃
+- `docs/`：給 Claude Code 讀的文件。`PLAN.md` 是產品設計與架構規劃，`PROGRESS.md` 是工作進度
