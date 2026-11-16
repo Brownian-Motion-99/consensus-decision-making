@@ -6,7 +6,6 @@ export const MAX_PLAYERS = 8;
 export const MIN_TARGET = 1;
 export const MAX_TARGET = 99;
 export const DEFAULT_TARGET = 3;
-export const MAX_NAME_LENGTH = 12;
 // 手寫答案是 PNG data URL，限制大小避免塞爆連線
 export const MAX_DRAWING_LENGTH = 200_000;
 const DRAWING_PATTERN = /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/;
@@ -46,7 +45,6 @@ export class Room {
     if (this.players.size >= MAX_PLAYERS) return `房間已滿（最多 ${MAX_PLAYERS} 人）`;
     const name = String(rawName ?? '').trim();
     if (!name) return '請輸入暱稱';
-    if ([...name].length > MAX_NAME_LENGTH) return `暱稱最多 ${MAX_NAME_LENGTH} 個字`;
     this.players.set(id, { id, name });
     if (!this.hostId || asHost) this.hostId = id;
     return null;
@@ -226,7 +224,6 @@ export class Room {
         minTarget: MIN_TARGET,
         maxTarget: MAX_TARGET,
         maxDrawingLength: MAX_DRAWING_LENGTH,
-        maxNameLength: MAX_NAME_LENGTH,
       },
       targetMatches: this.targetMatches,
       question: this.inGame() ? { number: this.number, text: this.question } : null,

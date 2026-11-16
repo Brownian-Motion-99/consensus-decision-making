@@ -10,7 +10,6 @@ const LIMITS = {
   maxPlayers: 8,
   minTarget: 1,
   maxTarget: 99,
-  maxNameLength: 12,
   maxDrawingLength: 200_000,
 };
 
@@ -18,7 +17,7 @@ const PLAYERS = [
   { id: 'p1', name: '小明' },
   { id: 'p2', name: '阿美' },
   { id: 'p3', name: '大雄' },
-  { id: 'p4', name: '一個名字很長的玩家' },
+  { id: 'p4', name: '一個名字非常非常非常非常非常非常長的玩家，長到一行放不下' },
 ];
 
 const QUESTION = { number: 3, text: '早餐店必點的一樣餐點是？' };

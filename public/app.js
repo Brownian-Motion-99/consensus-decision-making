@@ -132,7 +132,11 @@ function renderPlayers(listEl, players, { showAnswered = false } = {}) {
   listEl.replaceChildren(
     ...players.map((p) => {
       const li = document.createElement('li');
-      li.textContent = p.name;
+      const name = document.createElement('span');
+      name.className = 'player-name';
+      name.textContent = p.name;
+      name.title = p.name; // 名字被截成「…」時，滑鼠移上去可以看全名
+      li.append(name);
       if (p.id === state.you.id) li.classList.add('is-me');
       if (p.isHost) {
         const badge = document.createElement('span');
@@ -158,6 +162,7 @@ function renderAnswers(listEl, answers) {
       const name = document.createElement('span');
       name.className = 'answer-name';
       name.textContent = a.name;
+      name.title = a.name;
       const img = document.createElement('img');
       img.className = 'drawing';
       img.alt = `${a.name} 的答案`;
@@ -188,7 +193,6 @@ function render() {
 
   if (!you.joined) {
     if (phase === 'lobby') {
-      $('name-input').maxLength = state.limits.maxNameLength;
       showScreen('join');
     } else {
       showScreen('locked');
