@@ -24,6 +24,10 @@
   --font-size-base: 16px;
   --font-size-question: 1.5rem;
   --font-size-result: 2.5rem;
+  --font-size-title: clamp(1.75rem, 10vw, 4rem); /* 首頁標題：第二行 7 個字，10vw 時約佔畫面寬度的 77% */
+  --font-size-connecting: calc(100vw / 12); /* 「連線中…」約 4 個字寬，1/12 視窗寬時整行佔畫面橫向中間的 1/3 */
+  --font-size-room-code: 1.5rem; /* 大廳的會議編號那一行 */
+  --font-size-small-btn: 0.9rem; /* 大廳的複製按鈕 */
 
   --space-1: 4px;
   --space-2: 8px;
@@ -141,7 +145,7 @@ a.btn {
   font-weight: 700;
   letter-spacing: 0.15em;
 }
-.room-code-line { margin: 0; font-size: var(--font-size-question); }
+.room-code-line { margin: 0; font-size: var(--font-size-room-code); }
 .code-input {
   font-family: ui-monospace, monospace;
   text-transform: uppercase;
@@ -182,7 +186,7 @@ body.is-host .guest-only { display: none; }
 .btn-small {
   width: auto;
   padding: var(--space-2) var(--space-3);
-  font-size: 0.9rem;
+  font-size: var(--font-size-small-btn);
 }
 
 .players, .answers { list-style: none; margin: 0; padding: 0; }
@@ -279,8 +283,7 @@ body.is-host .guest-only { display: none; }
 }
 .heartbeat-text {
   position: relative;
-  /* 「連線中…」約 4 個字寬，字級取視窗寬度的 1/12，整行就佔畫面橫向的中間 1/3 */
-  font-size: calc(100vw / 12);
+  font-size: var(--font-size-connecting);
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
@@ -343,8 +346,7 @@ body.is-host .guest-only { display: none; }
 }
 .logo-title {
   margin: 0;
-  /* 第二行 7 個字：10vw 時約佔畫面寬度的 77%，手機上不會超出 */
-  font-size: clamp(1.75rem, 10vw, 4rem);
+  font-size: var(--font-size-title);
   line-height: 1.3;
   text-align: center;
   color: var(--color-primary-text);
