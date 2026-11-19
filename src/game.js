@@ -41,8 +41,8 @@ export class Room {
   /** asHost：開房的人晚一步取暱稱，加入時仍然拿回主持人。 */
   join(id, rawName, { asHost = false } = {}) {
     if (this.phase !== 'lobby') return '遊戲進行中，目前無法加入';
-    if (this.players.has(id)) return '你已經在房間裡了';
-    if (this.players.size >= MAX_PLAYERS) return `房間已滿（最多 ${MAX_PLAYERS} 人）`;
+    if (this.players.has(id)) return '你已經在會議室裡了';
+    if (this.players.size >= MAX_PLAYERS) return `會議室已滿（最多 ${MAX_PLAYERS} 人）`;
     const name = String(rawName ?? '').trim();
     if (!name) return '請輸入暱稱';
     this.players.set(id, { id, name });
@@ -83,18 +83,18 @@ export class Room {
   // ---- 主持人操作 ----
 
   setTargetMatches(id, count) {
-    if (id !== this.hostId) return '只有主持人可以調整目標';
+    if (id !== this.hostId) return '只有主席可以調整目標';
     if (this.phase !== 'lobby') return '遊戲開始後不能調整目標';
     const n = Number(count);
     if (!Number.isInteger(n) || n < MIN_TARGET || n > MAX_TARGET) {
-      return `目標一致次數需介於 ${MIN_TARGET} 到 ${MAX_TARGET} 之間`;
+      return `目標決議數需介於 ${MIN_TARGET} 到 ${MAX_TARGET} 之間`;
     }
     this.targetMatches = n;
     return null;
   }
 
   start(id) {
-    if (id !== this.hostId) return '只有主持人可以開始遊戲';
+    if (id !== this.hostId) return '只有主席可以開始會議';
     if (this.phase !== 'lobby') return '遊戲已經開始了';
     if (this.players.size < MIN_PLAYERS) return `至少需要 ${MIN_PLAYERS} 人才能開始`;
     this.resetGame();
@@ -103,7 +103,7 @@ export class Room {
   }
 
   reveal(id) {
-    if (id !== this.hostId) return '只有主持人可以公開答案';
+    if (id !== this.hostId) return '只有主席可以公開答案';
     if (this.phase !== 'answering') return '現在不能公開答案';
     if (!this.allAnswered()) return '還有人沒送出答案';
     this.revealed = [...this.players.values()].map((p) => ({
@@ -115,7 +115,7 @@ export class Room {
   }
 
   judge(id, match) {
-    if (id !== this.hostId) return '只有主持人可以判定';
+    if (id !== this.hostId) return '只有主席可以判定';
     if (this.phase !== 'revealed') return '現在不能判定';
     if (typeof match !== 'boolean') return '判定結果格式錯誤';
     this.history.push({ question: this.question, match });
@@ -125,7 +125,7 @@ export class Room {
 
   /** 達到目標一致次數就結算，否則一直出下一題。 */
   next(id) {
-    if (id !== this.hostId) return '只有主持人可以進到下一題';
+    if (id !== this.hostId) return '只有主席可以進到下一題';
     if (this.phase !== 'judged') return '現在不能進到下一題';
     if (this.targetReached()) {
       this.answers = new Map();
@@ -138,7 +138,7 @@ export class Room {
   }
 
   backToLobby(id) {
-    if (id !== this.hostId) return '只有主持人可以回到大廳';
+    if (id !== this.hostId) return '只有主席可以召開下一場會議';
     if (this.phase !== 'finished') return '遊戲還沒結束';
     this.resetGame();
     return null;

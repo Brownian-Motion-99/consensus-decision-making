@@ -50,7 +50,7 @@ export function initGallery({ devices, defaultDevice, scales, defaultScale, stor
 
     const caption = document.createElement('figcaption');
     const title = document.createElement('span');
-    title.textContent = role ? `${entry.label}｜${role === 'host' ? '主持人' : '一般玩家'}` : entry.label;
+    title.textContent = role ? `${entry.label}｜${role === 'host' ? '主席' : '一般玩家'}` : entry.label;
     const link = document.createElement('a');
     link.href = url;
     link.target = '_blank';

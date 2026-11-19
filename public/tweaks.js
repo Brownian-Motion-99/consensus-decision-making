@@ -12,7 +12,7 @@ const LABELS = {
   '--color-border': '卡片邊框',
   '--color-primary': '主色（按鈕）',
   '--color-primary-text': '主色上的文字',
-  '--color-match': '「一致！」',
+  '--color-match': '「達成共識！」',
   '--color-error': '錯誤',
   '--color-done': '已作答',
   '--color-board': '白板底色',

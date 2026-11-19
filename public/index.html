@@ -3,7 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" id="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>默契一致</title>
+  <title>本次會議我們採取共識決</title>
+  <!-- 加到主畫面時顯示的短名稱 -->
+  <meta name="application-name" content="共識決">
+  <meta name="apple-mobile-web-app-title" content="共識決">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -25,14 +28,15 @@
     <section class="screen" data-screen="home" hidden>
       <!-- 之後放 logo 的位置 -->
       <div class="logo">
-        <h1 class="logo-title">默契一致</h1>
+        <!-- 名稱太長，手機上一行放不下，固定拆成兩行 -->
+        <h1 class="logo-title">本次會議<br>我們採取共識決</h1>
       </div>
       <form id="enter-form" class="stack">
         <input id="code-input" class="code-input" autocomplete="off" autocapitalize="characters"
-          spellcheck="false" maxlength="4" required placeholder="房號" aria-label="房號">
+          spellcheck="false" maxlength="4" required placeholder="會議編號" aria-label="會議編號">
         <div class="row">
-          <button type="button" id="create-btn" class="btn btn-primary">開新房間</button>
-          <button type="submit" class="btn">加入房間</button>
+          <button type="button" id="create-btn" class="btn btn-primary">召開會議</button>
+          <button type="submit" class="btn">加入會議</button>
         </div>
       </form>
       </div>
@@ -40,7 +44,7 @@
 
     <!-- 加入 -->
     <section class="screen" data-screen="join" hidden>
-      <p class="muted" id="join-hint" hidden>房間開好了！取個暱稱，你就是這間房的主持人。</p>
+      <p class="muted" id="join-hint" hidden>會議召開了！取個暱稱，你就是這場會議的主席。</p>
       <form id="join-form" class="stack">
         <label for="name-input">暱稱</label>
         <input id="name-input" autocomplete="off" required>
@@ -50,27 +54,27 @@
 
     <!-- 遊戲進行中，無法加入 -->
     <section class="screen" data-screen="locked" hidden>
-      <h2>遊戲進行中</h2>
-      <p class="muted">這局結束、回到大廳之後就可以加入。</p>
+      <h2>會議進行中</h2>
+      <p class="muted">等這場會議散會、主席召開下一場會議之後就可以加入。</p>
       <a class="btn" href="/">回首頁</a>
     </section>
 
     <!-- 大廳 -->
     <section class="screen" data-screen="lobby" hidden>
       <div class="invite">
-        <p class="room-code-line">房號 <span class="room-code" id="room-code"></span></p>
-        <button type="button" id="copy-code-btn" class="btn btn-small">複製房號</button>
+        <p class="room-code-line">會議編號 <span class="room-code" id="room-code"></span></p>
+        <button type="button" id="copy-code-btn" class="btn btn-small">複製會議編號</button>
         <button type="button" id="copy-link-btn" class="btn btn-small">複製連結</button>
       </div>
       <h3>玩家 <span id="lobby-count"></span></h3>
       <ul class="players" id="lobby-players"></ul>
       <div class="host-only stack">
-        <label for="target-input">一致幾次才結束</label>
+        <label for="target-input">需要通過幾項決議</label>
         <input id="target-input" type="number" inputmode="numeric" step="1">
-        <button id="start-btn" class="btn btn-primary">開始遊戲</button>
+        <button id="start-btn" class="btn btn-primary">開始會議</button>
       </div>
       <p class="guest-only muted" id="lobby-target"></p>
-      <p class="guest-only muted">等待主持人開始遊戲…</p>
+      <p class="guest-only muted">等待主席宣布開會…</p>
     </section>
 
     <!-- 作答 -->
@@ -120,8 +124,8 @@
       <div class="result" id="result" hidden></div>
       <div class="host-only">
         <div class="row" id="judge-buttons">
-          <button id="match-btn" class="btn btn-primary">一致</button>
-          <button id="nomatch-btn" class="btn">不一致</button>
+          <button id="match-btn" class="btn btn-primary">達成共識</button>
+          <button id="nomatch-btn" class="btn">未達共識</button>
         </div>
         <button id="next-btn" class="btn btn-primary" hidden></button>
       </div>
@@ -132,9 +136,9 @@
     <section class="screen" data-screen="finished" hidden>
       <p class="score" id="score"></p>
       <div class="host-only">
-        <button id="lobby-btn" class="btn btn-primary">回到大廳</button>
+        <button id="lobby-btn" class="btn btn-primary">召開下一場會議</button>
       </div>
-      <p class="guest-only muted">等待主持人回到大廳…</p>
+      <p class="guest-only muted">等待主席召開下一場會議…</p>
     </section>
 
     <!-- 斷線 -->

@@ -51,7 +51,7 @@ test('房間數有上限', () => {
   rooms.create();
   rooms.create();
   const { error } = rooms.create();
-  assert.match(error, /上限/);
+  assert.match(error, /借光/);
 });
 
 test('不同房間的狀態和廣播互不干擾', () => {
@@ -103,7 +103,7 @@ test('有人離線會通知同房的人，最後一人離開就收掉房間', ()
 
   session.detach(s1);
   rooms.release(session);
-  assert.match(s2.last('notice').message, /甲 離線了，新主持人是 乙/);
+  assert.match(s2.last('notice').message, /甲 離席了，新主席是 乙/);
   assert.equal(rooms.get(session.code), session);
 
   session.detach(s2);

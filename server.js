@@ -126,7 +126,7 @@ wss.on('connection', (ws, req) => {
     },
     enter(msg) {
       const found = rooms.get(msg.code);
-      if (!found) return `找不到房號「${String(msg.code ?? '').trim().slice(0, 8)}」`;
+      if (!found) return `找不到會議編號「${String(msg.code ?? '').trim().slice(0, 8)}」`;
       session = found;
       session.attach(ws, id);
       return null;
@@ -143,10 +143,10 @@ wss.on('connection', (ws, req) => {
     }
     let error;
     if (session) {
-      error = entryHandlers[msg?.type] ? '你已經在房間裡了' : session.handle(ws, msg);
+      error = entryHandlers[msg?.type] ? '你已經在會議室裡了' : session.handle(ws, msg);
     } else {
       const handler = entryHandlers[msg?.type];
-      error = handler ? handler(msg) : '請先開房間或輸入房號';
+      error = handler ? handler(msg) : '請先召開會議或輸入會議編號';
     }
     if (error) send(ws, { type: 'error', message: error });
   });
@@ -173,7 +173,7 @@ setInterval(() => {
 }, HEARTBEAT_MS);
 
 http.listen(PORT, HOST, async () => {
-  console.log('默契一致 server 已啟動');
+  console.log('本次會議我們採取共識決 server 已啟動');
   if (process.env.HOST) {
     console.log(`監聽 ${HOST}:${PORT}`);
     return;

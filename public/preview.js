@@ -20,7 +20,7 @@ const PLAYERS = [
   { id: 'p4', name: '一個名字非常非常非常非常非常非常長的玩家，長到一行放不下' },
 ];
 
-const QUESTION = { number: 3, text: '早餐店必點的一樣餐點是？' };
+const QUESTION = { number: 3, text: '請各位表決：早餐店必點的一樣餐點。' };
 
 /** 用白板程式把文字畫成圖片，當作假的手寫答案。 */
 function fakeDrawing(text, width = 600, height = 400) {
@@ -182,8 +182,8 @@ export const PREVIEWS = {
 function flowSteps(role) {
   const youId = role === 'guest' ? 'p2' : 'p1';
   const allIds = PLAYERS.map((p) => p.id);
-  const q1 = { number: 1, text: '說到夏天，你會想到什麼？' };
-  const q2 = { number: 2, text: '早餐店必點的一樣餐點是？' };
+  const q1 = { number: 1, text: '關於「夏天」，大家的第一印象為何？' };
+  const q2 = { number: 2, text: '請各位表決：早餐店必點的一樣餐點。' };
   const myAnswer1 = fakeDrawing('西瓜');
   const myAnswer2 = fakeDrawing('蛋餅');
   const answers1 = PLAYERS.map((p, i) => ({ name: p.name, image: fakeDrawing(['西瓜', '海邊', '西瓜', '冰淇淋'][i]) }));

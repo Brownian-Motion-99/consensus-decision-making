@@ -46,7 +46,7 @@ test('只有主持人能開始，且至少 2 人', () => {
   const solo = setup(['A']);
   assert.match(solo.start('A'), /至少/);
   const room = setup();
-  assert.match(room.start('B'), /主持人/);
+  assert.match(room.start('B'), /主席/);
   assert.equal(room.start('A'), null);
   assert.equal(room.phase, 'answering');
   assert.equal(room.viewFor('B').question.number, 1);
@@ -58,7 +58,7 @@ test('目標一致次數只能由主持人在開局前設定，範圍 1 到 99',
   assert.match(room.setTargetMatches('A', 100), /目標/);
   assert.match(room.setTargetMatches('A', 2.5), /目標/);
   assert.equal(room.setTargetMatches('A', 99), null);
-  assert.match(room.setTargetMatches('B', 2), /主持人/);
+  assert.match(room.setTargetMatches('B', 2), /主席/);
   assert.equal(room.setTargetMatches('A', 2), null);
   assert.equal(room.viewFor('B').targetMatches, 2);
   room.start('A');
@@ -83,7 +83,7 @@ test('還沒全員作答時不能公開；只有主持人能公開', () => {
   room.answer('B', png('AA'));
   assert.match(room.reveal('A'), /沒送出/);
   room.answer('C', png('AA'));
-  assert.match(room.reveal('B'), /主持人/);
+  assert.match(room.reveal('B'), /主席/);
   assert.equal(room.reveal('A'), null);
   assert.equal(room.phase, 'revealed');
   assert.equal(room.viewFor('B').revealed.length, 3);
@@ -125,7 +125,7 @@ test('完整一局：達到目標一致次數才結算，之後回大廳', () =>
   room.start('A');
   answerAll(room);
   room.reveal('A');
-  assert.match(room.judge('B', true), /主持人/);
+  assert.match(room.judge('B', true), /主席/);
   room.judge('A', false);
   room.next('A');
   playRound(room, true);

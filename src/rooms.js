@@ -61,9 +61,9 @@ export class RoomSession {
     if (!player) return;
     const wasInGame = room.inGame();
     const newHostId = room.leave(id);
-    const notices = [`${player.name} 離線了`];
-    if (newHostId) notices.push(`新主持人是 ${room.players.get(newHostId).name}`);
-    if (wasInGame && room.phase === 'finished') notices.push('人數不足，直接進入結算');
+    const notices = [`${player.name} 離席了`];
+    if (newHostId) notices.push(`新主席是 ${room.players.get(newHostId).name}`);
+    if (wasInGame && room.phase === 'finished') notices.push('出席人數不足，提前散會');
     this.broadcast({ type: 'notice', message: notices.join('，') });
     this.broadcastState();
   }
@@ -110,7 +110,7 @@ export class RoomRegistry {
 
   /** 開一間新房間。回傳 { session } 或 { error }。 */
   create() {
-    if (this.sessions.size >= this.maxRooms) return { error: '目前房間數已達上限，請稍後再試' };
+    if (this.sessions.size >= this.maxRooms) return { error: '目前會議室都借光了，請稍後再試' };
     const code = this.uniqueCode();
     const joinUrl = this.joinUrlFor(code);
     const session = new RoomSession({ code, questions: this.questions, joinUrl, random: this.random });

@@ -2,7 +2,7 @@
   "name": "tacit-understanding",
   "version": "0.1.0",
   "private": true,
-  "description": "默契一致：多人派對遊戲 demo",
+  "description": "本次會議我們採取共識決：多人派對遊戲 demo",
   "type": "module",
   "main": "server.js",
   "scripts": {

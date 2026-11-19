@@ -141,7 +141,7 @@ function renderPlayers(listEl, players, { showAnswered = false } = {}) {
       if (p.isHost) {
         const badge = document.createElement('span');
         badge.className = 'badge';
-        badge.textContent = '主持人';
+        badge.textContent = '主席';
         li.append(badge);
       }
       if (showAnswered) {
@@ -174,7 +174,7 @@ function renderAnswers(listEl, answers) {
 }
 
 function progressText(q) {
-  return `第 ${q.number} 題｜目標：一致 ${state.targetMatches} 次`;
+  return `第 ${q.number} 題｜目標：通過 ${state.targetMatches} 項決議`;
 }
 
 // 只在狀態「切換」的那一刻播放，剛連上線或其他更新不會重播
@@ -216,7 +216,7 @@ function renderLobby() {
   input.max = limits.maxTarget;
   // 主持人正在輸入時不要覆蓋
   if (document.activeElement !== input) input.value = String(targetMatches);
-  $('lobby-target').textContent = `目標：一致 ${targetMatches} 次才結束`;
+  $('lobby-target').textContent = `目標：通過 ${targetMatches} 項決議才散會`;
 
   const enough = players.length >= limits.minPlayers;
   $('start-btn').disabled = !enough;
@@ -258,28 +258,28 @@ function renderRevealed() {
   $('reveal-question').textContent = question.text;
   renderAnswers($('reveal-answers'), revealed);
   $('tally').textContent =
-    `目前一致 ${tally.match} 題・不一致 ${tally.miss} 題（目標一致 ${targetMatches} 次）`;
+    `目前達成共識 ${tally.match} 題・未達共識 ${tally.miss} 題（目標通過 ${targetMatches} 項決議）`;
 
   const judged = phase === 'judged';
   const result = $('result');
   result.hidden = !judged;
   if (judged) {
-    result.textContent = lastMatch ? '一致！' : '沒有一致…';
+    result.textContent = lastMatch ? '達成共識！' : '未達共識…';
     result.classList.toggle('is-match', lastMatch);
   }
 
   $('judge-buttons').hidden = judged;
   $('next-btn').hidden = !judged;
-  $('next-btn').textContent = targetReached ? '看結算' : '下一題';
-  $('reveal-wait').textContent = judged ? '等待主持人進到下一題…' : '等待主持人判定…';
+  $('next-btn').textContent = targetReached ? '看會議紀錄' : '下一題';
+  $('reveal-wait').textContent = judged ? '等待主席進到下一題…' : '等待主席判定…';
   showScreen('revealed');
 }
 
 function renderFinished() {
   const { rounds, tally, targetMatches, targetReached } = state;
   $('score').textContent = targetReached
-    ? `達成目標！一共答了 ${rounds} 題，一致 ${tally.match} 次`
-    : `人數不足，提前結束：一致 ${tally.match} / ${targetMatches} 次，一共答了 ${rounds} 題`;
+    ? `會議圓滿結束！一共討論了 ${rounds} 題，通過 ${tally.match} 項決議`
+    : `出席人數不足，提前散會：通過 ${tally.match} / ${targetMatches} 項決議，一共討論了 ${rounds} 題`;
   showScreen('finished');
 }
 
@@ -309,7 +309,7 @@ $('target-input').addEventListener('change', (e) => {
 });
 
 $('start-btn').addEventListener('click', () => sendAction('start'));
-$('copy-code-btn').addEventListener('click', () => copyText(invite.code, '房號'));
+$('copy-code-btn').addEventListener('click', () => copyText(invite.code, '會議編號'));
 $('copy-link-btn').addEventListener('click', () => copyText(invite.url, '連結'));
 
 function clearAnswer() {
