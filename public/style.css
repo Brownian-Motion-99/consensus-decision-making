@@ -170,7 +170,7 @@ body.is-host .guest-only { display: none; }
 }
 .notice.is-error { color: var(--color-error); border-color: var(--color-error); }
 
-/* 房號和兩個複製按鈕排成一排，太窄時按鈕換到下一行 */
+/* 房號獨佔一行，兩個複製按鈕並排在下方 */
 .invite {
   display: flex;
   flex-wrap: wrap;
@@ -178,6 +178,7 @@ body.is-host .guest-only { display: none; }
   justify-content: center;
   gap: var(--space-2) var(--space-3);
 }
+.invite .room-code-line { flex-basis: 100%; text-align: center; }
 .btn-small {
   width: auto;
   padding: var(--space-2) var(--space-3);
