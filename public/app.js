@@ -39,6 +39,13 @@ function connect() {
       history.replaceState(null, '', `/?room=${msg.code}`);
     } else if (msg.type === 'state') {
       applyState(msg.state);
+    } else if (msg.type === 'closed') {
+      // 房間閒置太久被 server 收掉了，回到首頁
+      state = null;
+      history.replaceState(null, '', '/');
+      params.delete('room');
+      showNotice(msg.message, true, { persist: true });
+      showScreen('home');
     } else if (msg.type === 'error' || msg.type === 'notice') {
       showNotice(msg.message, msg.type === 'error');
       // 還沒進房間時的錯誤（找不到房號、房間數滿了）回到首頁
@@ -191,18 +198,14 @@ function render() {
   const { phase, you } = state;
   document.body.classList.toggle('is-host', you.isHost);
 
-  if (!you.joined) {
-    if (phase === 'lobby') {
-      showScreen('join');
-    } else {
-      showScreen('locked');
-    }
-    return;
-  }
+  // 任何時候都能加入；題目進行中加入的人先列席
+  if (!you.joined) return showScreen('join');
+  if (you.observer) return showScreen('observing');
 
   if (phase === 'lobby') renderLobby();
   else if (phase === 'answering') renderAnswering();
   else if (phase === 'revealed' || phase === 'judged') renderRevealed();
+  else if (phase === 'paused') renderPaused();
   else if (phase === 'finished') renderFinished();
 }
 
@@ -275,11 +278,24 @@ function renderRevealed() {
   showScreen('revealed');
 }
 
+function renderPaused() {
+  const { players, limits, tally, targetMatches } = state;
+  $('paused-message').textContent =
+    `出席人數不足。目前通過 ${tally.match} / ${targetMatches} 項決議，人數湊齊後從下一題繼續。`;
+  $('paused-count').textContent = `${players.length} / ${limits.maxPlayers}`;
+  renderPlayers($('paused-players'), players);
+
+  const enough = players.length >= limits.minPlayers;
+  $('resume-btn').disabled = !enough;
+  $('resume-btn').textContent = enough ? '繼續會議' : `至少需要 ${limits.minPlayers} 人`;
+  // 作廢那一題的題號會留給下一題，要讓白板在繼續時清空
+  lastQuestionNumber = null;
+  showScreen('paused');
+}
+
 function renderFinished() {
-  const { rounds, tally, targetMatches, targetReached } = state;
-  $('score').textContent = targetReached
-    ? `會議圓滿結束！一共討論了 ${rounds} 題，通過 ${tally.match} 項決議`
-    : `出席人數不足，提前散會：通過 ${tally.match} / ${targetMatches} 項決議，一共討論了 ${rounds} 題`;
+  const { rounds, tally } = state;
+  $('score').textContent = `會議圓滿結束！一共討論了 ${rounds} 題，通過 ${tally.match} 項決議`;
   showScreen('finished');
 }
 
@@ -340,6 +356,7 @@ $('reveal-btn').addEventListener('click', () => sendAction('reveal'));
 $('match-btn').addEventListener('click', () => sendAction('judge', { match: true }));
 $('nomatch-btn').addEventListener('click', () => sendAction('judge', { match: false }));
 $('next-btn').addEventListener('click', () => sendAction('next'));
+$('resume-btn').addEventListener('click', () => sendAction('resume'));
 $('lobby-btn').addEventListener('click', () => sendAction('backToLobby'));
 $('reload-btn').addEventListener('click', () => location.reload());
 

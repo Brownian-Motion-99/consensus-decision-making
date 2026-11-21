@@ -61,11 +61,10 @@
       </form>
     </section>
 
-    <!-- 遊戲進行中，無法加入 -->
-    <section class="screen" data-screen="locked" hidden>
-      <h2>會議進行中</h2>
-      <p class="muted">等這場會議散會、主席召開下一場會議之後就可以加入。</p>
-      <a class="btn" href="/">回首頁</a>
+    <!-- 題目進行中才加入：列席，下一題開始時轉為玩家 -->
+    <section class="screen" data-screen="observing" hidden>
+      <h2>列席中</h2>
+      <p class="muted">下個議案開始時即可進入會議。</p>
     </section>
 
     <!-- 大廳 -->
@@ -141,6 +140,18 @@
       <p class="guest-only muted" id="reveal-wait"></p>
     </section>
 
+    <!-- 休會：遊戲中人數不足 -->
+    <section class="screen" data-screen="paused" hidden>
+      <h2>暫時休會</h2>
+      <p class="muted" id="paused-message"></p>
+      <h3>出席 <span id="paused-count"></span></h3>
+      <ul class="players" id="paused-players"></ul>
+      <div class="host-only">
+        <button id="resume-btn" class="btn btn-primary">繼續會議</button>
+      </div>
+      <p class="guest-only muted">等待主席繼續會議…</p>
+    </section>
+
     <!-- 結算 -->
     <section class="screen" data-screen="finished" hidden>
       <p class="score" id="score"></p>
@@ -153,7 +164,7 @@
     <!-- 斷線 -->
     <section class="screen" data-screen="disconnected" hidden>
       <h2>連線中斷</h2>
-      <p class="muted">目前不支援重新連線，請重新整理頁面，等下一局再加入。</p>
+      <p class="muted">重新整理就能回到會議室，下個議案開始時加入。</p>
       <div class="row">
         <a class="btn" href="/">回首頁</a>
         <button class="btn btn-primary" id="reload-btn">重新整理</button>

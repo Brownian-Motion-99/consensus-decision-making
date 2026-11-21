@@ -21,15 +21,11 @@ test('第一個加入的人是主持人', () => {
   assert.equal(room.hostId, 'A');
 });
 
-test('加入的限制：空白、人數上限、遊戲中', () => {
+test('加入的限制：空白、人數上限', () => {
   const room = setup(['A']);
   assert.match(room.join('x', '  '), /暱稱/);
   for (const n of ['B', 'C', 'D', 'E', 'F', 'G', 'H']) assert.equal(room.join(n, n), null);
   assert.match(room.join('I', 'I'), /已滿/);
-
-  const room2 = setup(['A', 'B']);
-  room2.start('A');
-  assert.match(room2.join('C', 'C'), /進行中/);
 });
 
 test('暱稱可以重複，玩家用 id 區分', () => {
@@ -190,18 +186,197 @@ test('玩家斷線後，作答進度只算在線的人', () => {
   assert.equal(room.reveal('A'), null);
 });
 
-test('遊戲中只剩 1 人時直接結算', () => {
-  const room = setup(['A', 'B']);
-  room.start('A');
-  room.leave('B');
-  assert.equal(room.phase, 'finished');
-});
 
 test('所有人都離開時房間重置', () => {
   const room = setup(['A', 'B']);
   room.start('A');
   room.leave('A');
   room.leave('B');
+  assert.equal(room.phase, 'lobby');
+  assert.equal(room.hostId, null);
+});
+
+// ---- 中途加入與休會 ----
+
+/** 公開並判定目前這題，但不進到下一題。 */
+function judgeRound(room, match) {
+  answerAll(room);
+  assert.equal(room.reveal('A'), null);
+  assert.equal(room.judge('A', match), null);
+}
+
+test('大廳、休會中、結算時加入的人，直接成為玩家', () => {
+  const lobby = setup(['A']);
+  assert.equal(lobby.join('B', 'B'), null);
+  assert.equal(lobby.players.has('B'), true);
+
+  const paused = setup(['A', 'B']);
+  paused.start('A');
+  paused.leave('B');
+  assert.equal(paused.phase, 'paused');
+  assert.equal(paused.join('C', 'C'), null);
+  assert.equal(paused.players.has('C'), true);
+
+  const finished = setup(['A', 'B']);
+  finished.setTargetMatches('A', 1);
+  finished.start('A');
+  playRound(finished, true);
+  assert.equal(finished.phase, 'finished');
+  assert.equal(finished.join('C', 'C'), null);
+  assert.equal(finished.players.has('C'), true);
+});
+
+test('作答中、已公開、已判定時加入的人，成為列席人員', () => {
+  for (const phase of ['answering', 'revealed', 'judged']) {
+    const room = setup(['A', 'B']);
+    room.start('A');
+    if (phase !== 'answering') {
+      answerAll(room);
+      room.reveal('A');
+    }
+    if (phase === 'judged') room.judge('A', false);
+    assert.equal(room.phase, phase);
+    assert.equal(room.join('C', 'C'), null);
+    assert.equal(room.players.has('C'), false, `${phase} 時加入成了玩家`);
+    const { you } = room.viewFor('C');
+    assert.equal(you.joined, true);
+    assert.equal(you.observer, true);
+  }
+});
+
+test('列席人員收到的狀態不含題目和任何答案', () => {
+  const room = setup(['A', 'B']);
+  room.start('A');
+  room.join('C', 'C');
+  room.answer('A', png('SECRETA'));
+  room.answer('B', png('SECRETB'));
+  room.reveal('A');
+  const json = JSON.stringify(room.viewFor('C'));
+  assert.ok(!json.includes('SECRET'), '列席人員看到了答案');
+  assert.ok(!json.includes(room.question), '列席人員看到了題目');
+});
+
+test('列席人員不算在「全員已作答」裡，也不能作答', () => {
+  const room = setup(['A', 'B']);
+  room.start('A');
+  room.join('C', 'C');
+  assert.match(room.answer('C', png('CC')), /列席/);
+  answerAll(room);
+  assert.equal(room.viewFor('A').allAnswered, true);
+  assert.equal(room.reveal('A'), null);
+});
+
+test('下一題開始時，列席人員轉為玩家', () => {
+  const room = setup(['A', 'B']);
+  room.start('A');
+  room.join('C', 'C');
+  playRound(room, false);
+  assert.equal(room.phase, 'answering');
+  assert.equal(room.players.has('C'), true);
+  assert.equal(room.viewFor('C').you.observer, false);
+  room.answer('A', png('AA'));
+  room.answer('B', png('BB'));
+  assert.match(room.reveal('A'), /沒送出/);
+});
+
+test('玩家加上列席人員最多 8 人', () => {
+  const room = setup(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
+  room.start('A');
+  assert.equal(room.join('H', 'H'), null);
+  assert.match(room.join('I', 'I'), /已滿/);
+  room.leave('H');
+  assert.equal(room.join('I', 'I'), null);
+});
+
+test('主持人離開時，只從玩家中挑新主持人', () => {
+  // 亂數固定取最後一位：列席人員如果也在候選名單裡，就會挑到 D
+  const room = setup(['A', 'B', 'C'], () => 0.99);
+  room.start('A');
+  room.join('D', 'D');
+  assert.equal(room.leave('A'), 'C');
+});
+
+test('遊戲中玩家少於 2 人時進入休會，保留目標、已判定的結果和題號', () => {
+  const room = setup(['A', 'B']);
+  room.setTargetMatches('A', 3);
+  room.start('A');
+  playRound(room, true);
+  judgeRound(room, false);
+  room.leave('B');
+  assert.equal(room.phase, 'paused');
+  const view = room.viewFor('A');
+  assert.equal(view.targetMatches, 3);
+  assert.deepEqual(view.tally, { match: 1, miss: 1 });
+
+  room.join('C', 'C');
+  assert.equal(room.resume('A'), null);
+  assert.equal(room.viewFor('A').question.number, 3);
+});
+
+test('休會時，還沒判定的那一題不算進統計', () => {
+  const room = setup(['A', 'B']);
+  room.start('A');
+  playRound(room, false);
+  answerAll(room);
+  room.reveal('A');
+  room.leave('B');
+  assert.deepEqual(room.viewFor('A').tally, { match: 0, miss: 1 });
+
+  room.join('C', 'C');
+  room.resume('A');
+  const view = room.viewFor('A');
+  assert.equal(view.rounds, 1);
+  assert.equal(view.question.number, 2, '作廢的那一題不佔題號');
+});
+
+test('進入休會時，列席人員轉為玩家', () => {
+  const room = setup(['A', 'B']);
+  room.start('A');
+  room.join('C', 'C');
+  room.leave('B');
+  assert.equal(room.phase, 'paused');
+  assert.equal(room.players.has('C'), true);
+  assert.equal(room.viewFor('C').you.observer, false);
+});
+
+test('玩家不到 2 人時不能繼續會議，而且只有主持人能繼續', () => {
+  const room = setup(['A', 'B']);
+  room.start('A');
+  room.leave('B');
+  assert.match(room.resume('A'), /至少/);
+  room.join('C', 'C');
+  assert.match(room.resume('C'), /主席/);
+  assert.equal(room.resume('A'), null);
+  assert.equal(room.phase, 'answering');
+  assert.match(room.resume('A'), /休會/);
+});
+
+test('繼續會議時，已達目標就進入結算，否則出下一題', () => {
+  const reached = setup(['A', 'B']);
+  reached.setTargetMatches('A', 1);
+  reached.start('A');
+  judgeRound(reached, true);
+  reached.leave('B');
+  reached.join('C', 'C');
+  assert.equal(reached.resume('A'), null);
+  assert.equal(reached.phase, 'finished');
+
+  const notYet = setup(['A', 'B']);
+  notYet.setTargetMatches('A', 2);
+  notYet.start('A');
+  judgeRound(notYet, true);
+  notYet.leave('B');
+  notYet.join('C', 'C');
+  assert.equal(notYet.resume('A'), null);
+  assert.equal(notYet.phase, 'answering');
+});
+
+test('休會中所有玩家都離開時，重置回大廳', () => {
+  const room = setup(['A', 'B']);
+  room.start('A');
+  room.leave('B');
+  assert.equal(room.phase, 'paused');
+  room.leave('A');
   assert.equal(room.phase, 'lobby');
   assert.equal(room.hostId, null);
 });

@@ -135,6 +135,7 @@ wss.on('connection', (ws, req) => {
 
   ws.on('message', (raw) => {
     if (!messageLimiter.hit(id)) return send(ws, { type: 'error', message: '操作太頻繁，請稍後再試' });
+    if (session?.closed) session = null; // 房間閒置太久被收掉了，回到還沒進房的狀態
     let msg;
     try {
       msg = JSON.parse(raw);
@@ -154,9 +155,7 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     sockets.delete(ws);
     connections.release(ip);
-    if (!session) return;
-    session.detach(ws);
-    rooms.release(session);
+    session?.detach(ws);
   });
 });
 

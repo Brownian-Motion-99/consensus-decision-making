@@ -1,4 +1,5 @@
 // 遊戲狀態機：lobby → answering → revealed → judged → (answering | finished)
+// 遊戲中人數不足時進入 paused，主持人繼續後的行為和「下一題」相同。
 // 這裡是唯一的權威狀態，不碰網路，方便測試。
 
 export const MIN_PLAYERS = 2;
@@ -21,12 +22,14 @@ export class Room {
     this.questionBank = questions;
     this.random = random;
     this.players = new Map(); // id -> { id, name }
+    this.observers = new Map(); // 列席人員：題目進行中才加入的人，下一題開始時轉為玩家。id -> { id, name }
     this.hostId = null;
     this.targetMatches = DEFAULT_TARGET;
     this.resetGame();
   }
 
   resetGame() {
+    this.promoteObservers();
     this.phase = 'lobby';
     this.deck = []; // 還沒出過的題目，抽完會重新洗牌
     this.question = null;
@@ -38,20 +41,29 @@ export class Room {
 
   // ---- 玩家進出 ----
 
-  /** asHost：開房的人晚一步取暱稱，加入時仍然拿回主持人。 */
+  /**
+   * 題目進行中加入的人先列席，其他時候直接成為玩家。
+   * asHost：開房的人晚一步取暱稱，加入時仍然拿回主持人。
+   */
   join(id, rawName, { asHost = false } = {}) {
-    if (this.phase !== 'lobby') return '遊戲進行中，目前無法加入';
-    if (this.players.has(id)) return '你已經在會議室裡了';
-    if (this.players.size >= MAX_PLAYERS) return `會議室已滿（最多 ${MAX_PLAYERS} 人）`;
+    if (this.isMember(id)) return '你已經在會議室裡了';
+    if (this.players.size + this.observers.size >= MAX_PLAYERS) {
+      return `會議室已滿（最多 ${MAX_PLAYERS} 人）`;
+    }
     const name = String(rawName ?? '').trim();
     if (!name) return '請輸入暱稱';
+    if (this.inRound()) {
+      this.observers.set(id, { id, name });
+      return null;
+    }
     this.players.set(id, { id, name });
     if (!this.hostId || asHost) this.hostId = id;
     return null;
   }
 
-  /** 玩家離開。回傳新主持人的 id（如果有換人），否則 null。 */
+  /** 玩家或列席人員離開。回傳新主持人的 id（如果有換人），否則 null。 */
   leave(id) {
+    if (this.observers.delete(id)) return null;
     if (!this.players.has(id)) return null;
     this.players.delete(id);
     this.answers.delete(id);
@@ -69,15 +81,17 @@ export class Room {
       newHostId = this.hostId;
     }
 
-    if (this.inGame() && this.players.size < MIN_PLAYERS) {
-      this.phase = 'finished';
-      this.revealed = null;
-    }
+    if (this.inRound() && this.players.size < MIN_PLAYERS) this.pause();
     return newHostId;
   }
 
-  inGame() {
-    return this.phase !== 'lobby' && this.phase !== 'finished';
+  isMember(id) {
+    return this.players.has(id) || this.observers.has(id);
+  }
+
+  /** 有題目正在進行：這時加入的人要列席。 */
+  inRound() {
+    return this.phase === 'answering' || this.phase === 'revealed' || this.phase === 'judged';
   }
 
   // ---- 主持人操作 ----
@@ -127,13 +141,16 @@ export class Room {
   next(id) {
     if (id !== this.hostId) return '只有主席可以進到下一題';
     if (this.phase !== 'judged') return '現在不能進到下一題';
-    if (this.targetReached()) {
-      this.answers = new Map();
-      this.revealed = null;
-      this.phase = 'finished';
-    } else {
-      this.nextQuestion();
-    }
+    this.advance();
+    return null;
+  }
+
+  /** 休會後繼續，行為和「下一題」相同。 */
+  resume(id) {
+    if (id !== this.hostId) return '只有主席可以繼續會議';
+    if (this.phase !== 'paused') return '現在沒有休會';
+    if (this.players.size < MIN_PLAYERS) return `至少需要 ${MIN_PLAYERS} 人才能繼續`;
+    this.advance();
     return null;
   }
 
@@ -147,6 +164,7 @@ export class Room {
   // ---- 玩家操作 ----
 
   answer(id, image) {
+    if (this.observers.has(id)) return '列席人員要等下個議案開始才能作答';
     if (!this.players.has(id)) return '你不在這局遊戲裡';
     if (this.phase !== 'answering') return '現在不能作答';
     if (this.answers.has(id)) return '已經送出答案，不能修改';
@@ -158,7 +176,33 @@ export class Room {
 
   // ---- 內部 ----
 
+  advance() {
+    if (this.targetReached()) {
+      this.promoteObservers();
+      this.answers = new Map();
+      this.revealed = null;
+      this.phase = 'finished';
+    } else {
+      this.nextQuestion();
+    }
+  }
+
+  /** 人數不足時休會。還沒判定的那一題作廢，題號留給下一題用。 */
+  pause() {
+    if (this.phase !== 'judged') this.number -= 1;
+    this.promoteObservers();
+    this.answers = new Map();
+    this.revealed = null;
+    this.phase = 'paused';
+  }
+
+  promoteObservers() {
+    for (const [id, observer] of this.observers) this.players.set(id, observer);
+    this.observers.clear();
+  }
+
   nextQuestion() {
+    this.promoteObservers();
     if (this.deck.length === 0) {
       this.deck = this.shuffle([...this.questionBank]);
       // 重新洗牌後，避免下一題剛好和上一題一樣
@@ -204,11 +248,14 @@ export class Room {
    */
   viewFor(viewerId) {
     const matches = this.matchCount();
+    // 列席人員只看得到等待畫面需要的資訊，不送題目和答案
+    const observer = this.observers.has(viewerId);
     return {
       phase: this.phase,
       you: {
         id: viewerId,
-        joined: this.players.has(viewerId),
+        joined: this.isMember(viewerId),
+        observer,
         isHost: viewerId === this.hostId,
         answer: this.answers.get(viewerId) ?? null,
       },
@@ -226,10 +273,10 @@ export class Room {
         maxDrawingLength: MAX_DRAWING_LENGTH,
       },
       targetMatches: this.targetMatches,
-      question: this.inGame() ? { number: this.number, text: this.question } : null,
+      question: this.inRound() && !observer ? { number: this.number, text: this.question } : null,
       allAnswered: this.phase === 'answering' && this.allAnswered(),
       revealed:
-        this.phase === 'revealed' || this.phase === 'judged' ? this.revealed : null,
+        (this.phase === 'revealed' || this.phase === 'judged') && !observer ? this.revealed : null,
       lastMatch: this.phase === 'judged' ? this.history.at(-1).match : null,
       rounds: this.history.length,
       tally: { match: matches, miss: this.history.length - matches },

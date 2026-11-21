@@ -70,10 +70,10 @@ export const PREVIEWS = {
     label: '加入遊戲',
     build: (role) => makeState(role, { you: { id: 'x', joined: false, isHost: false, answer: null } }),
   },
-  locked: {
-    label: '遊戲進行中，無法加入',
+  observing: {
+    label: '列席中（題目進行中才加入）',
     build: (role) =>
-      makeState(role, { phase: 'answering', question: QUESTION, you: { id: 'x', joined: false, isHost: false, answer: null } }),
+      makeState(role, { phase: 'answering', you: { id: 'x', joined: true, observer: true, isHost: false, answer: null } }),
   },
   lobby: { label: '大廳', roles: ['host', 'guest'], build: (role) => makeState(role) },
   'lobby-alone': {
@@ -159,10 +159,14 @@ export const PREVIEWS = {
     build: (role) =>
       makeState(role, { phase: 'finished', tally: { match: 3, miss: 4 }, rounds: 7, targetReached: true }),
   },
-  'finished-early': {
-    label: '結算（人數不足提前結束）',
-    build: (role) =>
-      makeState(role, { phase: 'finished', tally: { match: 1, miss: 2 }, rounds: 3, targetReached: false }),
+  paused: {
+    label: '休會（人數湊齊，可以繼續）',
+    roles: ['host', 'guest'],
+    build: (role) => makeState(role, { phase: 'paused', players: makeState(role).players.slice(0, 2) }),
+  },
+  'paused-alone': {
+    label: '休會（人數不足）',
+    build: (role) => ({ ...makeState(role, { phase: 'paused' }), players: [{ ...PLAYERS[0], isHost: true, answered: false }] }),
   },
   notice: {
     label: '錯誤提示',
