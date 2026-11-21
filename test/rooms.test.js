@@ -234,3 +234,26 @@ test('每間房最多 5 條還沒取暱稱的連線，超過的會被拒絕', ()
   session.handle(pending[0], { type: 'join', name: '甲' });
   assert.equal(session.attach(extra, 'extra'), null);
 });
+
+test('列席人員離開時，只通知離席，不影響遊戲', () => {
+  const rooms = registry();
+  const { session, ws: s1 } = roomWithOne(rooms);
+  const [s2, s3] = [fakeSocket(), fakeSocket()];
+  session.attach(s2, 'p2');
+  session.handle(s2, { type: 'join', name: '乙' });
+  session.handle(s1, { type: 'start' });
+  session.attach(s3, 'p3');
+  session.handle(s3, { type: 'join', name: '丙' });
+
+  session.detach(s3);
+  assert.equal(s1.last('notice').message, '丙 離席了');
+  assert.equal(session.room.phase, 'answering');
+  assert.equal(session.room.players.size, 2);
+});
+
+test('回收時間照規格：空房 30 秒、沒人加入 10 分鐘', () => {
+  // 測試裡其他地方都用常數，這裡把規格上的數字釘住，避免常數被改了也沒人發現
+  assert.equal(EMPTY_ROOM_GRACE_MS, 30_000);
+  assert.equal(IDLE_ROOM_MS, 10 * 60_000);
+  assert.equal(MAX_PENDING_CONNECTIONS, 5);
+});

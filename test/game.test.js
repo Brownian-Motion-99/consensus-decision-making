@@ -391,3 +391,53 @@ test('還沒取暱稱的連線收不到題目和任何答案', () => {
   assert.ok(!json.includes('SECRET'), '還沒取暱稱的連線看到了答案');
   assert.ok(!json.includes(room.question), '還沒取暱稱的連線看到了題目');
 });
+
+test('開房的人只有在大廳加入時才拿回主持人', () => {
+  for (const phase of ['paused', 'finished']) {
+    const room = setup(['B', 'C']);
+    room.setTargetMatches('B', 1);
+    room.start('B');
+    if (phase === 'paused') room.leave('C');
+    else {
+      for (const id of ['B', 'C']) room.answer(id, png('AA'));
+      room.reveal('B');
+      room.judge('B', true);
+      room.next('B');
+    }
+    assert.equal(room.phase, phase);
+    assert.equal(room.join('A', 'A', { asHost: true }), null);
+    assert.equal(room.hostId, 'B', `${phase} 時開房的人搶走了主持人`);
+  }
+});
+
+test('結算或回到大廳時，列席人員轉為玩家', () => {
+  const finished = setup(['A', 'B']);
+  finished.setTargetMatches('A', 1);
+  finished.start('A');
+  finished.join('C', 'C');
+  playRound(finished, true);
+  assert.equal(finished.phase, 'finished');
+  assert.equal(finished.players.has('C'), true);
+
+  // 回到大廳的那條路：所有玩家都離開時重置
+  const reset = setup(['A', 'B']);
+  reset.start('A');
+  reset.observers.set('C', { id: 'C', name: 'C' }); // 直接塞一位列席人員，模擬重置當下還有人列席
+  reset.resetGame();
+  assert.equal(reset.players.has('C'), true);
+  assert.equal(reset.observers.size, 0);
+});
+
+test('休會時清空答案，繼續後大家重新作答', () => {
+  const room = setup(['A', 'B', 'C']);
+  room.start('A');
+  room.answer('A', png('OLD'));
+  room.leave('B');
+  room.leave('C');
+  assert.equal(room.phase, 'paused');
+  assert.equal(room.viewFor('A').you.answer, null, '休會時還留著作廢那一題的答案');
+  room.join('D', 'D');
+  room.resume('A');
+  assert.equal(room.viewFor('A').you.answer, null);
+  assert.equal(room.answer('A', png('NEW')), null);
+});

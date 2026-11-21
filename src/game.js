@@ -43,7 +43,7 @@ export class Room {
 
   /**
    * 題目進行中加入的人先列席，其他時候直接成為玩家。
-   * asHost：開房的人晚一步取暱稱，加入時仍然拿回主持人。
+   * asHost：開房的人晚一步取暱稱，在大廳加入時仍然拿回主持人；遊戲開始後就不搶了。
    */
   join(id, rawName, { asHost = false } = {}) {
     if (this.isMember(id)) return '你已經在會議室裡了';
@@ -57,7 +57,7 @@ export class Room {
       return null;
     }
     this.players.set(id, { id, name });
-    if (!this.hostId || asHost) this.hostId = id;
+    if (!this.hostId || (asHost && this.phase === 'lobby')) this.hostId = id;
     return null;
   }
 
