@@ -18,6 +18,8 @@ const HOST = process.env.HOST || (LAN ? '0.0.0.0' : '127.0.0.1');
 // 只有在 Cloudflare Tunnel 後面才信任它帶的玩家 IP，否則 header 可以被偽造
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const HEARTBEAT_MS = 10_000;
+// 連續幾次沒回 pong 才斷線。網路慢的玩家收大快照（公開答案後約 1.8MB）時，pong 會排在快照後面，不能太快判定
+const MAX_MISSED_PONGS = 3;
 
 // 開放到外網時擋洗頻用，正常遊玩遠低於這些數字
 const connections = new ConnectionCounter({ total: 200, perKey: 20 });
@@ -113,12 +115,12 @@ wss.on('connection', (ws, req) => {
   const messageLimiter = new RateLimiter({ limit: MESSAGES_PER_SECOND, windowMs: 1000 });
   let session = null; // 這條連線所在的房間，開房或輸入房號之後才有
   sockets.add(ws);
-  ws.isAlive = true;
+  ws.missedPongs = 0;
   // 訊息超過大小上限、frame 格式錯誤時，ws 會發出 error 再自己關掉連線。
   // 沒有 error listener 的話，Node 會把它當成沒處理的錯誤，整個 process 結束
   ws.on('error', () => {});
   ws.on('pong', () => {
-    ws.isAlive = true;
+    ws.missedPongs = 0;
   });
 
   // 還沒進房間時只能開房或輸入房號
@@ -186,11 +188,11 @@ wss.on('connection', (ws, req) => {
 // 手機鎖螢幕時連線常常不會正常關閉，定期 ping 來偵測
 setInterval(() => {
   for (const ws of sockets) {
-    if (!ws.isAlive) {
+    if (ws.missedPongs >= MAX_MISSED_PONGS) {
       ws.terminate();
       continue;
     }
-    ws.isAlive = false;
+    ws.missedPongs += 1;
     ws.ping();
   }
 }, HEARTBEAT_MS);
