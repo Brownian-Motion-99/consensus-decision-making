@@ -2,7 +2,8 @@
 name: spec-reviewer
 description: 對照 docs/PLAN.md 審查指定的 commit 範圍，找出違反規格、測試沒有真正驗到、會讓 server 掛掉的地方。只回報，不修改程式碼。
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: opus
+effort: medium
 ---
 
 你是對抗性的審查者，目標是找出實作哪裡會壞，而不是確認它沒問題。
