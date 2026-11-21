@@ -1,6 +1,12 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { RoomRegistry, CODE_LENGTH, EMPTY_ROOM_GRACE_MS, IDLE_ROOM_MS } from '../src/rooms.js';
+import {
+  RoomRegistry,
+  CODE_LENGTH,
+  EMPTY_ROOM_GRACE_MS,
+  IDLE_ROOM_MS,
+  MAX_PENDING_CONNECTIONS,
+} from '../src/rooms.js';
 
 // 房間回收用 setTimeout，換成假的時鐘，用 tick() 快轉
 mock.timers.enable({ apis: ['setTimeout'] });
@@ -211,4 +217,20 @@ test('期間有人加入的話，10 分鐘的計時就取消', () => {
   mock.timers.tick(IDLE_ROOM_MS);
   assert.equal(rooms.get(session.code), null);
   assert.match(s2.last('closed').message, /閒置/);
+});
+
+test('每間房最多 5 條還沒取暱稱的連線，超過的會被拒絕', () => {
+  const rooms = registry();
+  const { session } = rooms.create();
+  const pending = Array.from({ length: MAX_PENDING_CONNECTIONS }, fakeSocket);
+  pending.forEach((ws, i) => assert.equal(session.attach(ws, `p${i}`, { owner: i === 0 }), null));
+
+  const extra = fakeSocket();
+  assert.match(session.attach(extra, 'extra'), /無法/);
+  assert.equal(session.clients.has(extra), false);
+  assert.equal(extra.messages.length, 0, '被拒絕的連線不該收到房間的任何資訊');
+
+  // 有人取好暱稱，就空出一個位置
+  session.handle(pending[0], { type: 'join', name: '甲' });
+  assert.equal(session.attach(extra, 'extra'), null);
 });

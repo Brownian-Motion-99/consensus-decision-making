@@ -121,14 +121,20 @@ wss.on('connection', (ws, req) => {
       const { session: created, error } = rooms.create();
       if (error) return error;
       session = created;
-      session.attach(ws, id, { owner: true });
+      session.attach(ws, id, { owner: true }); // 新房間一定進得去
       return null;
     },
     enter(msg) {
       const found = rooms.get(msg.code);
       if (!found) return `找不到會議編號「${String(msg.code ?? '').trim().slice(0, 8)}」`;
+      const error = found.attach(ws, id);
+      if (error) {
+        // 還沒取暱稱的連線太多，大概是有人在灌連線：不說明原因，直接斷線
+        send(ws, { type: 'error', message: error });
+        ws.close(1008);
+        return null;
+      }
       session = found;
-      session.attach(ws, id);
       return null;
     },
   };

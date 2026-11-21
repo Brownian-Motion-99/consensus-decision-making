@@ -380,3 +380,14 @@ test('休會中所有玩家都離開時，重置回大廳', () => {
   assert.equal(room.phase, 'lobby');
   assert.equal(room.hostId, null);
 });
+
+test('還沒取暱稱的連線收不到題目和任何答案', () => {
+  const room = setup(['A', 'B']);
+  room.start('A');
+  room.answer('A', png('SECRETA'));
+  room.answer('B', png('SECRETB'));
+  room.reveal('A');
+  const json = JSON.stringify(room.viewFor('stranger'));
+  assert.ok(!json.includes('SECRET'), '還沒取暱稱的連線看到了答案');
+  assert.ok(!json.includes(room.question), '還沒取暱稱的連線看到了題目');
+});

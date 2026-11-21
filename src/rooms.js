@@ -11,6 +11,8 @@ export const MAX_ROOMS = 100;
 export const EMPTY_ROOM_GRACE_MS = 30_000;
 // 開了房卻一直沒有人加入（例如分頁開著沒人管），就收掉
 export const IDLE_ROOM_MS = 10 * 60_000;
+// 進了會議編號但還沒取暱稱的連線，每間房的上限。正常使用碰不到，擋的是灌連線
+export const MAX_PENDING_CONNECTIONS = 5;
 
 export function normalizeCode(raw) {
   return String(raw ?? '').trim().toUpperCase();
@@ -48,12 +50,22 @@ export class RoomSession {
     return this.room.players.size + this.room.observers.size > 0;
   }
 
+  /** 還沒取暱稱的連線數。 */
+  get pendingCount() {
+    let count = 0;
+    for (const id of this.clients.values()) if (!this.room.isMember(id)) count++;
+    return count;
+  }
+
+  /** 讓連線進房。還沒取暱稱的連線太多時拒絕，回傳錯誤訊息，否則回傳 null。 */
   attach(ws, id, { owner = false } = {}) {
+    if (this.pendingCount >= MAX_PENDING_CONNECTIONS) return '目前無法進入，請稍後再試';
     this.clients.set(ws, id);
     if (owner) this.ownerId = id;
     send(ws, { type: 'welcome', code: this.code, owner, joinUrl: this.joinUrl });
     send(ws, { type: 'state', state: this.room.viewFor(id) });
     this.onChange();
+    return null;
   }
 
   /** 處理房間內的操作，回傳錯誤訊息或 null；成功時會廣播新狀態。 */

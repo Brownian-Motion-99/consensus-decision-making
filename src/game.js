@@ -248,14 +248,14 @@ export class Room {
    */
   viewFor(viewerId) {
     const matches = this.matchCount();
-    // 列席人員只看得到等待畫面需要的資訊，不送題目和答案
-    const observer = this.observers.has(viewerId);
+    // 只有玩家看得到題目和答案；列席人員和還沒取暱稱的連線都不送
+    const isPlayer = this.players.has(viewerId);
     return {
       phase: this.phase,
       you: {
         id: viewerId,
         joined: this.isMember(viewerId),
-        observer,
+        observer: this.observers.has(viewerId),
         isHost: viewerId === this.hostId,
         answer: this.answers.get(viewerId) ?? null,
       },
@@ -273,10 +273,10 @@ export class Room {
         maxDrawingLength: MAX_DRAWING_LENGTH,
       },
       targetMatches: this.targetMatches,
-      question: this.inRound() && !observer ? { number: this.number, text: this.question } : null,
+      question: this.inRound() && isPlayer ? { number: this.number, text: this.question } : null,
       allAnswered: this.phase === 'answering' && this.allAnswered(),
       revealed:
-        (this.phase === 'revealed' || this.phase === 'judged') && !observer ? this.revealed : null,
+        (this.phase === 'revealed' || this.phase === 'judged') && isPlayer ? this.revealed : null,
       lastMatch: this.phase === 'judged' ? this.history.at(-1).match : null,
       rounds: this.history.length,
       tally: { match: matches, miss: this.history.length - matches },
