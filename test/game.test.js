@@ -40,16 +40,16 @@ test('暱稱最多 100 個字，以 code point 計算', () => {
   assert.equal(room.join('e', ` ${'字'.repeat(100)} `), null);
 });
 
-test('只有看不見字元的暱稱，換成「動物＋數字」', () => {
+test('只有看不見字元的暱稱，換成「匿名＋動物」', () => {
   const invisible = ['\u200b', '\u200b\u200d\ufeff', '\u3164', '\u2800', '\u00ad', ' \u200b '];
   for (const raw of invisible) {
     const room = new Room({ questions: QUESTIONS, random: () => 0 });
     assert.equal(room.join('a', raw), null, JSON.stringify(raw));
-    assert.equal(room.players.get('a').name, '水豚 1', JSON.stringify(raw));
+    assert.equal(room.players.get('a').name, '匿名水豚', JSON.stringify(raw));
   }
   const room = new Room({ questions: QUESTIONS, random: () => 0.999 });
   room.join('a', '\u200b');
-  assert.equal(room.players.get('a').name, '帝雉 99');
+  assert.equal(room.players.get('a').name, '匿名帝雉');
 });
 
 test('看得見的暱稱不會被換掉，空白暱稱照樣拒絕', () => {

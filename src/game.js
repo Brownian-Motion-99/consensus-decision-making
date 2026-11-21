@@ -92,10 +92,9 @@ export class Room {
     return newHostId;
   }
 
-  /** 「動物＋數字」的暱稱，給看不見的暱稱用。可以重複。 */
+  /** 「匿名水豚」這類暱稱，給看不見的暱稱用。可以重複。 */
   randomName() {
-    const animal = ANIMALS[Math.floor(this.random() * ANIMALS.length)];
-    return `${animal} ${1 + Math.floor(this.random() * 99)}`;
+    return `匿名${ANIMALS[Math.floor(this.random() * ANIMALS.length)]}`;
   }
 
   isMember(id) {
