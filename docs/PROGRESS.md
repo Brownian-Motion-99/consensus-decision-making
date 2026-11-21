@@ -125,6 +125,13 @@ public/tweaks.js     調整面板
 - 主持人可以手動「結束遊戲」。
 - 暱稱重複時加上區分，例如「小明 #a3f」或標示「（你）」。
 
+### 驗證流程
+
+- **CI**：推到 GitHub 之後，每次 push 跑 `npm test`。目前還沒有 remote。
+- **Mutation testing**：用 Stryker 定期檢查測試有沒有真的抓得到錯。這次是審查 agent 手動做的，找到了 5 個缺口。
+- **o11y**：server 印結構化 log（開房、開局、結算、斷線、限流、錯誤），前端的錯誤透過 WebSocket 回報給 server。
+- **分工原則**：已知的問題類型（讓 server 掛掉的輸入、資料外洩）寫成固定測試；審查 agent 負責找新的問題類型。
+
 ### 上線前要處理
 
 - 部署平台：建議 Render、Railway、Fly.io，或 Cloudflare Workers 搭配 Durable Objects。GitHub Actions 只能做 CI 和自動部署，不能當 server。
