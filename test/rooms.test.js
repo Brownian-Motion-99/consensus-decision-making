@@ -6,6 +6,8 @@ import {
   EMPTY_ROOM_GRACE_MS,
   IDLE_ROOM_MS,
   MAX_PENDING_CONNECTIONS,
+  MAX_BACKLOG_BYTES,
+  send,
 } from '../src/rooms.js';
 
 // 房間回收用 setTimeout，換成假的時鐘，用 tick() 快轉
@@ -26,6 +28,12 @@ function fakeSocket() {
   return {
     OPEN: 1,
     readyState: 1,
+    bufferedAmount: 0,
+    terminated: false,
+    terminate() {
+      this.terminated = true;
+      this.readyState = 3;
+    },
     messages: [],
     send(raw, done) {
       this.messages.push(JSON.parse(raw));
@@ -40,16 +48,23 @@ function fakeSocket() {
   };
 }
 
-/** 網路很慢的連線：訊息要等 flush() 才算送完。 */
+/** 網路很慢的連線：訊息照順序排隊，要等 flush() 才算送完。bufferedAmount 是還沒送完的 byte 數。 */
 function slowSocket() {
   const ws = fakeSocket();
-  ws.pending = [];
+  ws.queue = [];
   ws.send = function (raw, done) {
     this.messages.push(JSON.parse(raw));
-    if (done) this.pending.push(done);
+    const bytes = Buffer.byteLength(raw);
+    this.bufferedAmount += bytes;
+    this.queue.push({ bytes, done });
   };
+  /** 送完排在前面的訊息，直到送完一份帶 callback 的（也就是快照）。 */
   ws.flush = function () {
-    this.pending.shift()?.();
+    while (this.queue.length) {
+      const { bytes, done } = this.queue.shift();
+      this.bufferedAmount -= bytes;
+      if (done) return done();
+    }
   };
   return ws;
 }
@@ -301,7 +316,7 @@ test('網路慢的連線：上一份快照沒送完就不送新的，送完後�
   // 沒有新的變化，就不會再送
   slow.flush();
   assert.equal(slow.count('state'), 2);
-  assert.equal(slow.pending.length, 0);
+  assert.equal(slow.queue.length, 0);
 });
 
 test('網路慢的連線照常收到通知', () => {
@@ -340,4 +355,46 @@ test('網路慢的連線離開或房間收掉後，送完也不會再補送', ()
   assert.equal(s2.sending.size + s2.stale.size, 0);
   slow2.flush();
   assert.equal(slow2.count('state'), 1);
+});
+
+test('排隊上限照規格：1MB', () => {
+  assert.equal(MAX_BACKLOG_BYTES, 1024 * 1024);
+});
+
+test('還沒送出去的錯誤、通知超過 1MB 就斷線', () => {
+  const ws = slowSocket();
+  const big = 'x'.repeat(200_000);
+  for (let i = 0; i < 5; i++) send(ws, { type: 'error', message: big });
+  assert.equal(ws.terminated, false, '1MB 以內不斷線');
+  send(ws, { type: 'error', message: big });
+  send(ws, { type: 'error', message: big });
+  assert.equal(ws.terminated, true);
+  // 斷線之後不再往裡面放
+  const queued = ws.queue.length;
+  send(ws, { type: 'error', message: 'x' });
+  assert.equal(ws.queue.length, queued);
+});
+
+test('正在送的快照不算進 1MB：公開答案時網路慢的玩家不會因為一則通知被斷線', () => {
+  const rooms = registry();
+  const { session, ws: host } = roomWithOne(rooms);
+  const slow = slowSocket();
+  session.attach(slow, 'slow');
+  session.handle(slow, { type: 'join', name: '慢' });
+  const others = ['丙', '丁', '戊', '己', '庚'].map((name, i) => {
+    const ws = fakeSocket();
+    session.attach(ws, `other-${i}`);
+    session.handle(ws, { type: 'join', name });
+    return ws;
+  });
+  session.handle(host, { type: 'start' });
+  const image = `data:image/png;base64,${'A'.repeat(199_000)}`;
+  for (const ws of [host, slow, ...others]) assert.equal(session.handle(ws, { type: 'answer', image }), null);
+  while (slow.queue.length) slow.flush();
+
+  session.handle(host, { type: 'reveal' });
+  assert.ok(slow.bufferedAmount > MAX_BACKLOG_BYTES, '公開答案的快照本身就超過 1MB');
+  session.detach(others[0]);
+  assert.equal(slow.terminated, false);
+  assert.equal(slow.last('notice').message, '丙 離席了');
 });

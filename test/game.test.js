@@ -57,6 +57,17 @@ test('看得見的暱稱不會被換掉，空白暱稱照樣拒絕', () => {
   assert.equal(room.join('a', '小明\u200b'), null);
   assert.equal(room.players.get('a').name, '小明\u200b');
   assert.match(room.join('b', '\u3000'), /請輸入暱稱/);
+  // 看得見的格式字元（阿拉伯文的 ۝）不能被當成看不見
+  assert.equal(room.join('c', '\u06dd'), null);
+  assert.equal(room.players.get('c').name, '\u06dd');
+});
+
+test('暱稱一定要是字串', () => {
+  const room = new Room({ questions: QUESTIONS });
+  for (const raw of [undefined, null, 0, true, ['小明'], { toString: 'x' }]) {
+    assert.match(room.join('a', raw), /暱稱格式錯誤/, JSON.stringify(raw));
+  }
+  assert.equal(room.players.size, 0);
 });
 
 test('暱稱可以重複，玩家用 id 區分', () => {

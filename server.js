@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { WebSocketServer } from 'ws';
 import QRCode from 'qrcode';
-import { RoomRegistry, MAX_ROOMS } from './src/rooms.js';
+import { RoomRegistry, MAX_ROOMS, send } from './src/rooms.js';
 import { RateLimiter, ConnectionCounter } from './src/limits.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -102,10 +102,6 @@ const http = createServer(async (req, res) => {
 
 const wss = new WebSocketServer({ server: http, maxPayload: 256 * 1024 });
 const sockets = new Set();
-
-function send(ws, msg) {
-  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
-}
 
 wss.on('connection', (ws, req) => {
   const ip = clientIp(req);

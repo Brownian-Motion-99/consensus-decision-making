@@ -13,7 +13,8 @@ const DRAWING_PATTERN = /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/;
 // 暱稱在每一份快照的玩家名單裡，每次廣播都會送，所以要有上限。以 code point 計算
 export const MAX_NAME_LENGTH = 100;
 // trim() 不會去掉零寬空格、韓文填充字元這類看不見的字元，只由它們組成的暱稱要換掉
-const INVISIBLE_NAME = /^[\p{White_Space}\p{Default_Ignorable_Code_Point}\p{Cc}\p{Cf}\u2800]*$/u;
+// 不用 \p{Cf}：裡面有看得見的字元（例如阿拉伯文的 ۝），看不見的那些大多已經在 Default_Ignorable 裡
+const INVISIBLE_NAME = /^[\p{White_Space}\p{Default_Ignorable_Code_Point}\p{Cc}\u2800]*$/u;
 const ANIMALS = ['水豚', '石虎', '黑熊', '穿山甲', '藍鵲', '白海豚', '櫻花鉤吻鮭', '梅花鹿', '水獺', '帝雉'];
 
 export class Room {
@@ -55,7 +56,9 @@ export class Room {
     if (this.players.size + this.observers.size >= MAX_PLAYERS) {
       return `會議室已滿（最多 ${MAX_PLAYERS} 人）`;
     }
-    let name = String(rawName ?? '').trim();
+    // 不用 String() 轉型：陣列會變成意外的字串，有自訂 toString 的物件還會丟例外
+    if (typeof rawName !== 'string') return '暱稱格式錯誤';
+    let name = rawName.trim();
     if (!name) return '請輸入暱稱';
     if ([...name].length > MAX_NAME_LENGTH) return `暱稱最多 ${MAX_NAME_LENGTH} 個字`;
     if (INVISIBLE_NAME.test(name)) name = this.randomName();
@@ -283,7 +286,6 @@ export class Room {
         minTarget: MIN_TARGET,
         maxTarget: MAX_TARGET,
         maxDrawingLength: MAX_DRAWING_LENGTH,
-        maxNameLength: MAX_NAME_LENGTH,
       },
       targetMatches: this.targetMatches,
       question: this.inRound() && isPlayer ? { number: this.number, text: this.question } : null,

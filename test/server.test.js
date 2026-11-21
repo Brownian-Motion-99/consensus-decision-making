@@ -107,3 +107,30 @@ test('格式錯誤的網址回傳 400，server 不會掛', async () => {
   assert.match(response, /^HTTP\/1\.1 400/);
   await assertAlive('格式錯誤的網址');
 });
+
+test('不讀資料的連線一直送小訊息，排隊超過上限就被斷線，server 記憶體不會一直長', async () => {
+  const rssKB = () =>
+    new Promise((resolve) => {
+      const ps = spawn('ps', ['-o', 'rss=', '-p', String(server.pid)]);
+      let out = '';
+      ps.stdout.on('data', (d) => (out += d));
+      ps.on('close', () => resolve(Number(out.trim())));
+    });
+  const before = await rssKB();
+  const ws = new WebSocket(`ws://127.0.0.1:${port}`);
+  ws.on('error', () => {});
+  await new Promise((r) => ws.on('open', r));
+  ws._socket.pause(); // 不讀 server 送來的任何東西
+  let closed = false;
+  ws._socket.on('close', () => (closed = true));
+  // 每則 1 byte 的訊息都會換到一則錯誤回覆（格式錯誤或太頻繁），沒有上限的話會放大幾十倍
+  for (let sent = 0; sent < 1_000_000 && !closed; sent += 10_000) {
+    for (let i = 0; i < 10_000; i++) ws.send('x');
+    await new Promise((r) => setTimeout(r, 5));
+  }
+  await new Promise((r) => setTimeout(r, 200));
+  assert.equal(closed, true, '排隊超過上限的連線要被斷掉');
+  const grownMB = ((await rssKB()) - before) / 1024;
+  assert.ok(grownMB < 100, `server 記憶體長了 ${grownMB.toFixed(0)}MB`);
+  await assertAlive('不讀資料又一直送小訊息');
+});

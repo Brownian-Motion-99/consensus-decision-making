@@ -1,5 +1,5 @@
 // 多房間：每間房是一個 RoomSession（Room + 連在這間房的連線），RoomRegistry 用房號管理所有房間。
-// 不直接依賴 ws 套件，連線物件只需要 readyState、OPEN 和 send(data, callback)，方便測試。
+// 不直接依賴 ws 套件，連線物件只需要 readyState、OPEN、bufferedAmount、send(data, callback) 和 terminate()，方便測試。
 
 import { Room } from './game.js';
 
@@ -18,8 +18,23 @@ export function normalizeCode(raw) {
   return String(raw ?? '').trim().toUpperCase();
 }
 
-function send(ws, msg) {
-  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
+// 正在送的那份快照以外，還沒送出去的訊息超過這個量就斷線：對方不讀資料時，錯誤和通知不能一直堆在 server
+export const MAX_BACKLOG_BYTES = 1024 * 1024;
+
+// 每條連線正在送的快照大小。快照最大約 1.8MB，本身已經限制成最多一份，所以不算進上面的上限
+const snapshotBytes = new WeakMap();
+
+/** 排隊太多就斷線，回傳 false；否則回傳 true，可以繼續送。 */
+function hasRoom(ws) {
+  if (ws.bufferedAmount - (snapshotBytes.get(ws) ?? 0) <= MAX_BACKLOG_BYTES) return true;
+  ws.terminate();
+  return false;
+}
+
+/** 送出一則訊息。server.js 回錯誤也用這個，所有訊息都要經過排隊上限的檢查。 */
+export function send(ws, msg) {
+  if (ws.readyState !== ws.OPEN || !hasRoom(ws)) return;
+  ws.send(JSON.stringify(msg));
 }
 
 export class RoomSession {
@@ -128,11 +143,13 @@ export class RoomSession {
       this.stale.add(ws);
       return;
     }
-    if (ws.readyState !== ws.OPEN) return;
+    if (ws.readyState !== ws.OPEN || !hasRoom(ws)) return;
     this.sending.add(ws);
-    const state = this.room.viewFor(this.clients.get(ws));
-    ws.send(JSON.stringify({ type: 'state', state }), () => {
+    const data = JSON.stringify({ type: 'state', state: this.room.viewFor(this.clients.get(ws)) });
+    snapshotBytes.set(ws, Buffer.byteLength(data));
+    ws.send(data, () => {
       this.sending.delete(ws);
+      snapshotBytes.delete(ws);
       // 中間錯過的快照不用補，只要送現在最新的；連線已經離開或房間收掉了就不送
       if (this.stale.delete(ws) && this.clients.has(ws)) this.sendState(ws);
     });
