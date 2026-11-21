@@ -138,15 +138,17 @@ test('送出答案後不能修改', () => {
   assert.equal(room.revealed.find((a) => a.name === 'B').image, png('OLD'));
 });
 
-test('答案必須是大小合理的 PNG data URL', () => {
+test('答案必須是大小合理的 JPEG 或 PNG data URL', () => {
   const room = setup();
   room.start('A');
   assert.match(room.answer('A', '文字答案'), /格式/);
   assert.match(room.answer('A', 'data:image/svg+xml;base64,AAAA'), /格式/);
+  assert.match(room.answer('A', 'data:image/gif;base64,AAAA'), /格式/);
   assert.match(room.answer('A', 'data:image/png;base64,<script>'), /格式/);
   assert.match(room.answer('A', { image: 'x' }), /格式/);
   assert.match(room.answer('A', png('A'.repeat(MAX_DRAWING_LENGTH))), /太大/);
   assert.equal(room.answer('A', png('iVBORw0KGgo=')), null);
+  assert.equal(room.answer('B', 'data:image/jpeg;base64,/9j/4AAQ'), null);
 });
 
 function playRound(room, match) {

@@ -1,4 +1,4 @@
-// 手寫白板：固定解析度的 canvas，用 pointer events 畫線（手指、觸控筆、滑鼠都可以），輸出 PNG data URL。
+// 手寫白板：固定解析度的 canvas，用 pointer events 畫線（手指、觸控筆、滑鼠都可以），輸出 JPEG data URL。
 // 白板分兩層：底下是打字的文字，上面是手寫筆畫。改文字時只重畫文字層，筆畫會保留。
 
 export function createBoard(
@@ -168,6 +168,8 @@ export function createBoard(
     clear,
     setText,
     isEmpty: () => !hasInk && !text,
-    toDataURL: () => canvas.toDataURL('image/png'),
+    // 用 JPEG 不用 PNG：有反指紋保護的瀏覽器（Ardia、Brave、Safari 無痕）讀取 canvas 時會加雜訊，
+    // PNG 壓不下來會超過大小上限，JPEG 不受影響。白底不需要透明度。
+    toDataURL: () => canvas.toDataURL('image/jpeg', 0.85),
   };
 }

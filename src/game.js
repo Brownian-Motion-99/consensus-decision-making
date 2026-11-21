@@ -7,9 +7,9 @@ export const MAX_PLAYERS = 8;
 export const MIN_TARGET = 1;
 export const MAX_TARGET = 99;
 export const DEFAULT_TARGET = 3;
-// 手寫答案是 PNG data URL，限制大小避免塞爆連線
+// 手寫答案是 JPEG data URL（舊版前端送 PNG，也接受），限制大小避免塞爆連線
 export const MAX_DRAWING_LENGTH = 200_000;
-const DRAWING_PATTERN = /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/;
+const DRAWING_PATTERN = /^data:image\/(?:jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
 // 暱稱在每一份快照的玩家名單裡，每次廣播都會送，所以要有上限。以 code point 計算
 export const MAX_NAME_LENGTH = 100;
 // trim() 不會去掉零寬空格、韓文填充字元這類看不見的字元，只由它們組成的暱稱要換掉
