@@ -71,7 +71,15 @@ function clientIp(req) {
 }
 
 const http = createServer(async (req, res) => {
-  const path = new URL(req.url, 'http://x').pathname;
+  let path;
+  try {
+    path = new URL(req.url, 'http://x').pathname;
+  } catch {
+    // 網址格式錯誤（例如 `GET http://[`），new URL 會丟例外，沒接住的話整個 process 會結束
+    res.writeHead(400);
+    res.end();
+    return;
+  }
   const entry = STATIC_FILES[path];
   if (!entry) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -110,6 +118,9 @@ wss.on('connection', (ws, req) => {
   let session = null; // 這條連線所在的房間，開房或輸入房號之後才有
   sockets.add(ws);
   ws.isAlive = true;
+  // 訊息超過大小上限、frame 格式錯誤時，ws 會發出 error 再自己關掉連線。
+  // 沒有 error listener 的話，Node 會把它當成沒處理的錯誤，整個 process 結束
+  ws.on('error', () => {});
   ws.on('pong', () => {
     ws.isAlive = true;
   });
@@ -140,6 +151,16 @@ wss.on('connection', (ws, req) => {
   };
 
   ws.on('message', (raw) => {
+    try {
+      handleMessage(raw);
+    } catch (err) {
+      // 最後一道防線：處理單一訊息時出了沒想到的錯，只回錯誤給這條連線，不讓整個 server 掛掉
+      console.error('處理訊息時發生錯誤', err);
+      send(ws, { type: 'error', message: '發生錯誤，請重新整理' });
+    }
+  });
+
+  function handleMessage(raw) {
     if (!messageLimiter.hit(id)) return send(ws, { type: 'error', message: '操作太頻繁，請稍後再試' });
     if (session?.closed) session = null; // 房間閒置太久被收掉了，回到還沒進房的狀態
     let msg;
@@ -148,15 +169,16 @@ wss.on('connection', (ws, req) => {
     } catch {
       return send(ws, { type: 'error', message: '訊息格式錯誤' });
     }
+    // 用 hasOwn 查表：type 是 __proto__、valueOf 這類物件繼承的屬性名稱時，不能被當成處理函式
+    const isEntry = Object.hasOwn(entryHandlers, msg?.type);
     let error;
     if (session) {
-      error = entryHandlers[msg?.type] ? '你已經在會議室裡了' : session.handle(ws, msg);
+      error = isEntry ? '你已經在會議室裡了' : session.handle(ws, msg);
     } else {
-      const handler = entryHandlers[msg?.type];
-      error = handler ? handler(msg) : '請先召開會議或輸入會議編號';
+      error = isEntry ? entryHandlers[msg.type](msg) : '請先召開會議或輸入會議編號';
     }
     if (error) send(ws, { type: 'error', message: error });
-  });
+  }
 
   ws.on('close', () => {
     sockets.delete(ws);

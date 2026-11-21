@@ -71,8 +71,9 @@ export class RoomSession {
   /** 處理房間內的操作，回傳錯誤訊息或 null；成功時會廣播新狀態。 */
   handle(ws, msg) {
     const id = this.clients.get(ws);
-    const handler = HANDLERS[msg?.type];
-    if (!handler) return '未知的操作';
+    // 用 hasOwn 查表：type 是 __proto__、valueOf 這類物件繼承的屬性名稱時，不能被當成處理函式
+    if (!Object.hasOwn(HANDLERS, msg?.type)) return '未知的操作';
+    const handler = HANDLERS[msg.type];
     const error = handler(this, id, msg);
     if (!error) this.broadcastState();
     this.onChange();
