@@ -247,6 +247,15 @@ function judgeRound(room, match) {
   assert.equal(room.judge('A', match), null);
 }
 
+test('休會中刻意不能改目標，想提早結束就各自離開', () => {
+  const room = setup(['A', 'B']);
+  room.start('A');
+  room.leave('B');
+  assert.equal(room.phase, 'paused');
+  assert.match(room.setTargetMatches('A', 1), /遊戲開始後不能調整目標/);
+  assert.equal(room.targetMatches, 3);
+});
+
 test('大廳、休會中、結算時加入的人，直接成為玩家', () => {
   const lobby = setup(['A']);
   assert.equal(lobby.join('B', 'B'), null);

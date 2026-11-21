@@ -375,7 +375,8 @@ test('還沒送出去的錯誤、通知超過 1MB 就斷線', () => {
   assert.equal(ws.queue.length, queued);
 });
 
-test('正在送的快照不算進 1MB：公開答案時網路慢的玩家不會因為一則通知被斷線', () => {
+/** 7 人房（含一條慢連線），全員送出接近上限的圖，主席公開答案：慢連線正在收一份超過 1MB 的快照。 */
+function revealedWithSlow() {
   const rooms = registry();
   const { session, ws: host } = roomWithOne(rooms);
   const slow = slowSocket();
@@ -391,10 +392,35 @@ test('正在送的快照不算進 1MB：公開答案時網路慢的玩家不會�
   const image = `data:image/png;base64,${'A'.repeat(199_000)}`;
   for (const ws of [host, slow, ...others]) assert.equal(session.handle(ws, { type: 'answer', image }), null);
   while (slow.queue.length) slow.flush();
-
   session.handle(host, { type: 'reveal' });
   assert.ok(slow.bufferedAmount > MAX_BACKLOG_BYTES, '公開答案的快照本身就超過 1MB');
+  return { session, host, slow, others };
+}
+
+test('正在送的快照不算進 1MB：公開答案時網路慢的玩家不會因為一則通知被斷線', () => {
+  const { session, slow, others } = revealedWithSlow();
   session.detach(others[0]);
   assert.equal(slow.terminated, false);
   assert.equal(slow.last('notice').message, '丙 離席了');
+});
+
+test('快照送完之後就不再扣掉它的大小，其他訊息照樣受 1MB 限制', () => {
+  const { slow } = revealedWithSlow();
+  while (slow.queue.length) slow.flush();
+  const big = 'x'.repeat(200_000);
+  for (let i = 0; i < 7; i++) send(slow, { type: 'error', message: big });
+  assert.equal(slow.terminated, true, '送完的快照如果還被扣掉，這裡會多放行 1MB 以上');
+});
+
+test('真的 ws 會先帶著錯誤呼叫 callback、之後才觸發 close：這段期間不能再送快照', () => {
+  const rooms = registry();
+  const { session } = roomWithOne(rooms);
+  const slow = slowSocket();
+  session.attach(slow, 'p2');
+  session.handle(slow, { type: 'join', name: '乙' }); // 有一份等著補送
+  const sent = slow.count('state');
+  slow.readyState = 2; // CLOSING：連線正在關，但還在 clients 裡
+  slow.queue.at(-1).done(new Error('ECANCELED'));
+  assert.equal(slow.count('state'), sent, '正在關的連線不該再收到快照');
+  assert.equal(session.sending.size + session.stale.size, 0);
 });
