@@ -11,6 +11,7 @@ const LIMITS = {
   minTarget: 1,
   maxTarget: 99,
   maxDrawingLength: 200_000,
+  maxNameLength: 100,
 };
 
 const PLAYERS = [

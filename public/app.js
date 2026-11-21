@@ -199,7 +199,10 @@ function render() {
   document.body.classList.toggle('is-host', you.isHost);
 
   // 任何時候都能加入；題目進行中加入的人先列席
-  if (!you.joined) return showScreen('join');
+  if (!you.joined) {
+    $('name-input').maxLength = state.limits.maxNameLength;
+    return showScreen('join');
+  }
   if (you.observer) return showScreen('observing');
 
   if (phase === 'lobby') renderLobby();

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Room, MAX_DRAWING_LENGTH } from '../src/game.js';
+import { Room, MAX_DRAWING_LENGTH, MAX_NAME_LENGTH } from '../src/game.js';
 
 const QUESTIONS = Array.from({ length: 12 }, (_, i) => `題目 ${i + 1}`);
 
@@ -26,6 +26,37 @@ test('加入的限制：空白、人數上限', () => {
   assert.match(room.join('x', '  '), /暱稱/);
   for (const n of ['B', 'C', 'D', 'E', 'F', 'G', 'H']) assert.equal(room.join(n, n), null);
   assert.match(room.join('I', 'I'), /已滿/);
+});
+
+test('暱稱最多 100 個字，以 code point 計算', () => {
+  assert.equal(MAX_NAME_LENGTH, 100);
+  const room = new Room({ questions: QUESTIONS });
+  assert.equal(room.join('a', '字'.repeat(100)), null);
+  assert.match(room.join('b', '字'.repeat(101)), /最多 100 個字/);
+  // emoji 在 JS 字串裡佔 2 個長度，但只算 1 個字
+  assert.equal(room.join('c', '😀'.repeat(100)), null);
+  assert.match(room.join('d', '😀'.repeat(101)), /最多 100 個字/);
+  // 前後空白不算
+  assert.equal(room.join('e', ` ${'字'.repeat(100)} `), null);
+});
+
+test('只有看不見字元的暱稱，換成「動物＋數字」', () => {
+  const invisible = ['\u200b', '\u200b\u200d\ufeff', '\u3164', '\u2800', '\u00ad', ' \u200b '];
+  for (const raw of invisible) {
+    const room = new Room({ questions: QUESTIONS, random: () => 0 });
+    assert.equal(room.join('a', raw), null, JSON.stringify(raw));
+    assert.equal(room.players.get('a').name, '水豚 1', JSON.stringify(raw));
+  }
+  const room = new Room({ questions: QUESTIONS, random: () => 0.999 });
+  room.join('a', '\u200b');
+  assert.equal(room.players.get('a').name, '帝雉 99');
+});
+
+test('看得見的暱稱不會被換掉，空白暱稱照樣拒絕', () => {
+  const room = new Room({ questions: QUESTIONS });
+  assert.equal(room.join('a', '小明\u200b'), null);
+  assert.equal(room.players.get('a').name, '小明\u200b');
+  assert.match(room.join('b', '\u3000'), /請輸入暱稱/);
 });
 
 test('暱稱可以重複，玩家用 id 區分', () => {

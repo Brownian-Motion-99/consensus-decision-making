@@ -1,5 +1,5 @@
 // 多房間：每間房是一個 RoomSession（Room + 連在這間房的連線），RoomRegistry 用房號管理所有房間。
-// 不直接依賴 ws 套件，連線物件只需要 readyState、OPEN 和 send()，方便測試。
+// 不直接依賴 ws 套件，連線物件只需要 readyState、OPEN 和 send(data, callback)，方便測試。
 
 import { Room } from './game.js';
 
@@ -39,6 +39,9 @@ export class RoomSession {
     this.ownerId = null; // 開房的人，取好暱稱加入後就是主持人
     this.onChange = onChange;
     this.closed = false;
+    // 快照還沒送完的連線，以及送完後要補送最新快照的連線。網路慢的人最多只會有一份快照在排隊
+    this.sending = new Set();
+    this.stale = new Set();
   }
 
   get isEmpty() {
@@ -63,7 +66,7 @@ export class RoomSession {
     this.clients.set(ws, id);
     if (owner) this.ownerId = id;
     send(ws, { type: 'welcome', code: this.code, owner, joinUrl: this.joinUrl });
-    send(ws, { type: 'state', state: this.room.viewFor(id) });
+    this.sendState(ws);
     this.onChange();
     return null;
   }
@@ -83,6 +86,8 @@ export class RoomSession {
   detach(ws) {
     const id = this.clients.get(ws);
     this.clients.delete(ws);
+    this.sending.delete(ws);
+    this.stale.delete(ws);
     this.notifyLeave(id);
     this.onChange();
   }
@@ -104,6 +109,8 @@ export class RoomSession {
   close(message) {
     this.broadcast({ type: 'closed', message });
     this.clients.clear();
+    this.sending.clear();
+    this.stale.clear();
     this.closed = true;
   }
 
@@ -112,7 +119,23 @@ export class RoomSession {
   }
 
   broadcastState() {
-    for (const [ws, id] of this.clients) send(ws, { type: 'state', state: this.room.viewFor(id) });
+    for (const ws of this.clients.keys()) this.sendState(ws);
+  }
+
+  /** 送出這條連線當下的快照。上一份還沒送完的話先不送，送完時再補送最新的一份。 */
+  sendState(ws) {
+    if (this.sending.has(ws)) {
+      this.stale.add(ws);
+      return;
+    }
+    if (ws.readyState !== ws.OPEN) return;
+    this.sending.add(ws);
+    const state = this.room.viewFor(this.clients.get(ws));
+    ws.send(JSON.stringify({ type: 'state', state }), () => {
+      this.sending.delete(ws);
+      // 中間錯過的快照不用補，只要送現在最新的；連線已經離開或房間收掉了就不送
+      if (this.stale.delete(ws) && this.clients.has(ws)) this.sendState(ws);
+    });
   }
 }
 

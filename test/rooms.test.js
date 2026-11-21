@@ -21,19 +21,37 @@ function registry(opts = {}) {
   });
 }
 
-/** 假的連線：只記錄收到的訊息。 */
+/** 假的連線：只記錄收到的訊息，每則訊息都馬上送完。 */
 function fakeSocket() {
   return {
     OPEN: 1,
     readyState: 1,
     messages: [],
-    send(raw) {
+    send(raw, done) {
       this.messages.push(JSON.parse(raw));
+      done?.();
     },
     last(type) {
       return this.messages.findLast((m) => m.type === type);
     },
+    count(type) {
+      return this.messages.filter((m) => m.type === type).length;
+    },
   };
+}
+
+/** 網路很慢的連線：訊息要等 flush() 才算送完。 */
+function slowSocket() {
+  const ws = fakeSocket();
+  ws.pending = [];
+  ws.send = function (raw, done) {
+    this.messages.push(JSON.parse(raw));
+    if (done) this.pending.push(done);
+  };
+  ws.flush = function () {
+    this.pending.shift()?.();
+  };
+  return ws;
 }
 
 test('開房會產生不重複、好辨認的房號', () => {
@@ -256,4 +274,70 @@ test('回收時間照規格：空房 30 秒、沒人加入 10 分鐘', () => {
   assert.equal(EMPTY_ROOM_GRACE_MS, 30_000);
   assert.equal(IDLE_ROOM_MS, 10 * 60_000);
   assert.equal(MAX_PENDING_CONNECTIONS, 5);
+});
+
+test('網路慢的連線：上一份快照沒送完就不送新的，送完後只補送最新的一份', () => {
+  const rooms = registry();
+  const { session, ws: fast } = roomWithOne(rooms);
+  const slow = slowSocket();
+  session.attach(slow, 'p2');
+  assert.equal(slow.count('state'), 1);
+
+  // 這段期間有三次廣播，慢的連線一份都沒有多收
+  session.handle(slow, { type: 'join', name: '乙' });
+  session.handle(fast, { type: 'setTargetMatches', count: 5 });
+  session.handle(fast, { type: 'setTargetMatches', count: 7 });
+  assert.equal(slow.count('state'), 1);
+  // 網路快的人不受影響
+  assert.equal(fast.last('state').state.targetMatches, 7);
+
+  // 送完之後補送一份，而且是最新的
+  slow.flush();
+  assert.equal(slow.count('state'), 2);
+  const latest = slow.last('state').state;
+  assert.equal(latest.targetMatches, 7);
+  assert.equal(latest.you.joined, true);
+
+  // 沒有新的變化，就不會再送
+  slow.flush();
+  assert.equal(slow.count('state'), 2);
+  assert.equal(slow.pending.length, 0);
+});
+
+test('網路慢的連線照常收到通知', () => {
+  const rooms = registry();
+  const { session, ws: s1 } = roomWithOne(rooms);
+  const slow = slowSocket();
+  session.attach(slow, 'p2');
+  session.handle(slow, { type: 'join', name: '乙' });
+  const s3 = fakeSocket();
+  session.attach(s3, 'p3');
+  session.handle(s3, { type: 'join', name: '丙' });
+  session.detach(s3);
+  assert.equal(slow.last('notice').message, '丙 離席了');
+  assert.equal(slow.count('state'), 1);
+  assert.equal(s1.last('notice').message, '丙 離席了');
+});
+
+test('網路慢的連線離開或房間收掉後，送完也不會再補送', () => {
+  const rooms = registry();
+  const { session } = roomWithOne(rooms);
+  const slow = slowSocket();
+  session.attach(slow, 'p2');
+  session.handle(slow, { type: 'join', name: '乙' });
+  session.detach(slow);
+  // 斷線時資料可能永遠送不完、callback 不會來，所以離開時就要清掉，不能等 callback
+  assert.equal(session.sending.size + session.stale.size, 0, '離開的連線不能留在名單裡');
+  slow.flush();
+  assert.equal(slow.count('state'), 1);
+
+  const other = registry();
+  const { session: s2 } = roomWithOne(other);
+  const slow2 = slowSocket();
+  s2.attach(slow2, 'p2');
+  s2.handle(slow2, { type: 'join', name: '乙' });
+  s2.close('收掉了');
+  assert.equal(s2.sending.size + s2.stale.size, 0);
+  slow2.flush();
+  assert.equal(slow2.count('state'), 1);
 });
