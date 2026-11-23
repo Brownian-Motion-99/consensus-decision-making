@@ -58,6 +58,7 @@
 - **審查 agent**：`.claude/agents/spec-reviewer.md`，對照 PLAN.md 審查指定的 commit 範圍，要求每個發現和「沒有問題」都附上證據。
 - **文件分工**：`README.md` 寫給一般玩家（怎麼玩、架設步驟、區網與外網模式、常見問題），假設架設的人會用 git 和終端機；開發者用的啟動模式、環境變數、sandbox 細節、預覽頁、測試和檔案說明移到 `docs/DEVELOPMENT.md`。
 - **授權**：自訂的個人使用條款（`LICENSE`，中英對照，以中文為準）：可以為個人、非商業目的使用、自架和自己修改；不能散布本軟體或修改版、不能商用。重點和第三方素材表放在 `docs/DEVELOPMENT.md` 的「授權」。
+- **音效出處**：三個音效都是 Freesound 的 preview。`correct.mp3`（StavSounds #546084）、`wrong.mp3`（KevinVG207 #331912）是 CC0；`congrats.mp3`（InspectorJ #484267）是 CC BY 4.0，必須標示作者。標示寫在 `docs/DEVELOPMENT.md` 的「第三方素材」。
 
 ### 外網連線
 
@@ -94,7 +95,6 @@ public/tweaks.js     調整面板
 - **置中有些微偏移**：內容上下置中時，底部為 Safari 工具列保留的 96px 也算在內，所以內容會比正中央略高（約 48px）。
 - **調整面板的部分字級只能打字修改**：首頁標題（`clamp()`）和「連線中…」（`calc()`）的值不是單純的 px／rem，面板會顯示成文字框，沒有滑桿。「連線中…」的波紋大小另外寫死成視窗寬度的 1/3，改字級時波紋不會跟著縮放。
 - **分享預覽只有文字**：還沒有 `og:image`。用 `localhost` 或區網網址分享時，LINE 抓不到預覽，要用 tunnel 的公開網址才會顯示。
-- **音效的出處和授權還沒補**：三個音效從 Freesound 下載，但沒有記下是哪幾個，檔案裡也沒有 metadata。要找回各音效的頁面，確認授權（CC0／CC BY／CC BY-NC）並填進 `docs/DEVELOPMENT.md` 的表格；如果是 CC BY 類，公開 repo 時就必須標示作者。
 - **Windows 不能直接用 `npm run start:lan`**：script 寫成 `LAN=1 node server.js`，Windows 的 npm 用 cmd 執行，不認得這種寫法。README 先請 Windows 玩家在 PowerShell 打 `$env:LAN=1; npm start`（沒有在 Windows 上實測）。要根治可以改成跨平台寫法（例如在 server.js 讀命令列參數）。
 - **架設門檻仍高**：玩家要自己裝 Node.js，外網模式還要裝 Docker Desktop、會用終端機。曾討論打包成雙擊啟動（Mac `.command`、Windows `.bat`，加上自動開啟的邀請頁和 GitHub Releases），因為測試量太大先暫停。
 - **tunnel 網址每次都會變**：quick tunnel 每次啟動都換網址。想要固定網址，可以在 Cloudflare 綁自己的網域（named tunnel），或改用 Tailscale Funnel。

@@ -84,8 +84,10 @@ npm test
 
 | 檔案 | 用途 | 出處 | 授權 |
 |---|---|---|---|
-| `audio/correct.mp3` | 達成共識 | 待補 | 待補 |
-| `audio/wrong.mp3` | 未達共識 | 待補 | 待補 |
-| `audio/congrats.mp3` | 會議紀錄（結算） | 待補 | 待補 |
+| `audio/correct.mp3` | 達成共識 | ["correct.wav"](https://freesound.org/people/StavSounds/sounds/546084/) by StavSounds | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `audio/wrong.mp3` | 未達共識 | ["Wrong Buzzer"](https://freesound.org/people/KevinVG207/sounds/331912/) by KevinVG207 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `audio/congrats.mp3` | 會議紀錄（結算） | ["Party Pack, Horn Coil 01, Long, 01.wav"](https://freesound.org/people/InspectorJ/sounds/484267/) by InspectorJ ([www.jshaw.co.uk](https://www.jshaw.co.uk)) of Freesound.org | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+
+三個檔案都是 Freesound 的 preview（低音質 mp3），檔案本身沒有修改；播放時的響度正規化是在瀏覽器裡即時計算的。`congrats.mp3` 是 CC BY 4.0，**散布時一定要保留上面的作者標示**。
 
 換音效時要同步更新這張表。Freesound 的音效常見三種授權：CC0（不用標示）、CC BY（要標示作者和出處）、CC BY-NC（要標示，且不能商用）。
