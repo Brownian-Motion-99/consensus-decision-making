@@ -66,6 +66,7 @@ export const FLOW_KEY = 'flow';
 export const PREVIEWS = {
   connecting: { label: '連線中', screen: 'connecting' },
   home: { label: '首頁（開房間／輸入房號）', screen: 'home' },
+  splash: { label: '啟動頁轉場（連線中 → 首頁）', screen: 'connecting', then: 'home', delay: 800 },
   join: {
     label: '加入遊戲',
     build: (role) => makeState(role, { you: { id: 'x', joined: false, isHost: false, answer: null } }),
@@ -335,6 +336,7 @@ export function startPreview(key, role, app) {
   if (!preview) return false;
   if (preview.screen) {
     app.showScreen(preview.screen);
+    if (preview.then) setTimeout(() => app.showScreen(preview.then, { splash: true }), preview.delay);
   } else {
     app.applyState(preview.build(normalizedRole));
   }

@@ -3,8 +3,18 @@
 
 import { createBoard } from './board.js';
 import { loadSounds, playSound, stopSound } from './sounds.js';
+import { createGreeting } from './greeting.js';
+import { fadeUp } from './fade-up.js';
+import { playSplash } from './splash.js';
+import { playCurtain } from './curtain.js';
+import { captureSubmit, playSubmit } from './submit-transition.js';
+import { initHoldButton } from './hold-button.js';
+import { playIris } from './iris.js';
+import { stackAnswers } from './photo-stack.js';
+import { playConfetti } from './confetti.js';
 
 const $ = (id) => document.getElementById(id);
+createGreeting($('connecting-greeting'));
 const board = createBoard($('board'), {
   fontFamily: getComputedStyle(document.body).fontFamily,
   // SVG 沒有 hidden 屬性可以直接設，要改 attribute
@@ -16,6 +26,7 @@ let previewMode = false; // 開發用預覽，不連線（見 preview.js）
 let state = null;
 let lastQuestionNumber = null;
 let noticeTimer = null;
+let warmImage = null; // 送出時先解碼好的答案圖，見 submit-btn
 
 const params = new URLSearchParams(location.search);
 
@@ -27,7 +38,7 @@ function connect() {
   ws.addEventListener('open', () => {
     const code = params.get('room');
     if (code) sendAction('enter', { code });
-    else showScreen('home');
+    else showScreen('home', { splash: true });
   });
 
   ws.addEventListener('message', (event) => {
@@ -107,9 +118,91 @@ function sendAction(type, payload = {}) {
 
 // ---- 畫面工具 ----
 
-function showScreen(name) {
+let currentScreen = null;
+let enterTween = null;
+
+// 圓形轉場還沒結束時，要等轉場的音效（結算）先排著，轉場結束才播
+let irisBusy = false;
+let queuedSound = null;
+
+// 用圓形展開換頁的路徑：到 name 這個畫面要從哪個畫面來、起點是哪顆按鈕
+const IRIS_ROUTES = {
+  revealed: { from: 'answering', button: 'reveal-btn' },
+  finished: { from: 'revealed', button: 'next-btn' },
+};
+
+// 用簾幕換頁的路徑：大廳 → 作答（開始遊戲）、判定完 → 下一題的作答
+const CURTAIN_FROM = new Set(['lobby', 'revealed']);
+
+/** splash：從連線中進入首頁時，播放啟動頁轉場（只有真的連線完成的那一次）。 */
+function showScreen(name, { splash = false } = {}) {
+  const previous = currentScreen;
+  const entering = name !== previous;
+  // 離開畫面時，還沒播完的進場動畫（或簾幕）直接還原，免得下次回來看到半透明的元素
+  if (entering) enterTween?.revert();
+  currentScreen = name;
+  if (!entering) return setZoomLocked(name === 'answering');
+
+  // 簾幕蓋滿以前畫面還是舊的；這段時間收到的新狀態只會更新看不到的作答畫面內容，不會再進到這裡
+  if (name === 'answering' && CURTAIN_FROM.has(previous)) {
+    enterTween = playCurtain($('curtain'), () => {
+      switchScreen(name);
+      return document.querySelector('[data-screen="answering"]');
+    });
+    return;
+  }
+  // 用圓形展開轉場的換頁：全員送出後主席公開答案（作答 → 公開答案）、看會議紀錄（公開答案 → 結算）。
+  // 白色圓從主席剛按的按鈕展開蓋住畫面，再從同一點展開透明的洞轉入新畫面；
+  // 公開答案的答案卡先疊在中央再展開，結算的文字彈出並噴彩紙
+  const route = IRIS_ROUTES[name];
+  if (route && route.from === previous) {
+    let stack = null;
+    let finale = null;
+    irisBusy = true;
+    const iris = playIris($('iris'), irisOrigin(route.button), {
+      swap: () => {
+        switchScreen(name);
+        if (name === 'revealed') stack = stackAnswers($('reveal-answers'));
+        else finale = playConfetti($('score'), $('confetti'), { delay: 0.5 }); // 洞開到一半時彈出
+      },
+      opened: () => {
+        irisBusy = false;
+        if (queuedSound) playSound(queuedSound); // 白色轉場結束後才播結算音效
+        queuedSound = null;
+        stack?.spread({ delay: 0.3 });
+      },
+    });
+    enterTween = {
+      revert() {
+        irisBusy = false;
+        queuedSound = null;
+        iris?.revert();
+        stack?.revert();
+        finale?.revert();
+      },
+    };
+    return;
+  }
+  switchScreen(name, { splash });
+  // 每次收到狀態都會呼叫 showScreen，所以只在換畫面的那一次播進場動畫
+  if (name === 'lobby') enterTween = fadeUp(document.querySelector('[data-screen="lobby"]'));
+  else if (name === 'finished') enterTween = playConfetti($('score'), $('confetti'));
+  else if (name === 'home' && splash) enterTween = playSplash(document.querySelector('[data-screen="connecting"]'), document.querySelector('[data-screen="home"]'));
+  else enterTween = null;
+}
+
+/** 圓形展開的起點：剛按下的按鈕的中心（只有主席看得到）；沒有按鈕就用畫面正中央。 */
+function irisOrigin(buttonId) {
+  const button = $(buttonId);
+  if (!button.getClientRects().length) return { x: innerWidth / 2, y: innerHeight / 2 };
+  const rect = button.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+function switchScreen(name, { splash = false } = {}) {
   for (const el of document.querySelectorAll('[data-screen]')) {
-    el.hidden = el.dataset.screen !== name;
+    // 轉場時，連線中的字還要飛出去，先留著，由 splash.js 播完後隱藏
+    el.hidden = el.dataset.screen !== name && !(splash && el.dataset.screen === 'connecting');
   }
   setZoomLocked(name === 'answering');
 }
@@ -162,7 +255,22 @@ function renderPlayers(listEl, players, { showAnswered = false } = {}) {
   );
 }
 
+// 依人數決定幾欄：1 人 1 欄、2 人 2 欄、3 人 3 欄、4 人 2×2、5～6 人 3×2、7～8 人 4×2；
+// 每張卡至少留 100px，手機放不下就少一欄
+const MIN_CARD_WIDTH = 100;
+function answerColumns(count, width) {
+  const ideal = count <= 3 ? count : count === 4 ? 2 : count <= 6 ? 3 : 4;
+  return Math.max(1, Math.min(ideal, Math.floor(width / MIN_CARD_WIDTH)));
+}
+
+// 每次收到狀態都會重畫，答案沒變就不要動 DOM，免得打斷正在播的展開動畫
+const renderedAnswers = new WeakMap();
+
 function renderAnswers(listEl, answers) {
+  listEl.style.setProperty('--cols', String(answerColumns(answers.length, document.querySelector('.container').clientWidth - 2 * 16)));
+  const key = answers.map((a) => `${a.name}\n${a.image}`).join('\0');
+  if (renderedAnswers.get(listEl) === key) return;
+  renderedAnswers.set(listEl, key);
   listEl.replaceChildren(
     ...answers.map((a) => {
       const li = document.createElement('li');
@@ -174,7 +282,7 @@ function renderAnswers(listEl, answers) {
       img.className = 'drawing';
       img.alt = `${a.name} 的答案`;
       img.src = a.image;
-      li.append(name, img);
+      li.append(img, name);
       return li;
     }),
   );
@@ -188,7 +296,11 @@ function progressText(q) {
 function playTransitionSound(prev, next) {
   if (!prev || !next.you.joined || prev.phase === next.phase) return;
   if (next.phase === 'judged') playSound(next.lastMatch ? 'correct' : 'wrong');
-  else if (next.phase === 'finished' && next.targetReached) playSound('congrats');
+  else if (next.phase === 'finished' && next.targetReached) {
+    // 從公開答案過來有白色轉場，等轉場結束再播（見 showScreen）
+    if (irisBusy) queuedSound = 'congrats';
+    else playSound('congrats');
+  }
   else if (prev.phase === 'finished') stopSound('congrats'); // 回到大廳就中斷
 }
 
@@ -237,6 +349,19 @@ function renderAnswering() {
     clearAnswer();
   }
 
+  // 這一刻剛送出答案（畫面上還是作答的樣子）：先記下舊位置，換完內容再播轉場
+  const answering = document.querySelector('[data-screen="answering"]');
+  const submitted = Boolean(you.answer) && !answering.hidden && !$('answer-form').hidden;
+  const before = submitted && captureSubmit({
+    shared: [
+      { from: $('answer-progress'), to: $('answer-progress') },
+      { from: $('answer-question'), to: $('answer-question') },
+      { from: $('board'), to: $('my-answer-img') },
+      { from: answering.querySelector('.host-only'), to: answering.querySelector('.host-only') },
+    ],
+    exiting: [$('type-form'), $('answer-form').querySelector('.row')],
+  });
+
   $('answer-progress').textContent = progressText(question);
   $('answer-question').textContent = question.text;
   $('answer-form').hidden = Boolean(you.answer);
@@ -251,8 +376,23 @@ function renderAnswering() {
   renderPlayers($('answer-players'), players, { showAnswered: true });
 
   $('reveal-btn').disabled = !allAnswered;
-  $('reveal-btn').textContent = allAnswered ? '公開答案' : '等待所有人作答…';
+  // 長按確認後的幾秒鐘文字固定顯示「已公開 ✓」，不被狀態更新蓋掉
+  if (!$('reveal-btn').classList.contains('is-confirmed')) renderRevealLabel();
   showScreen('answering');
+  if (before) {
+    enterTween?.revert();
+    enterTween = playSubmit(before, { entering: [$('my-answer').querySelector('.muted'), $('answer-status')] });
+  }
+}
+
+/** 按鈕上的字有兩份：底下的白字，和長按時蓋過去那一層自己帶的黃字 */
+function setRevealLabel(text) {
+  $('reveal-label').textContent = text;
+  $('reveal-fill').dataset.label = text;
+}
+
+function renderRevealLabel() {
+  setRevealLabel(state?.allAnswered ? '公開答案' : '等待所有人作答…');
 }
 
 function renderRevealed() {
@@ -265,14 +405,14 @@ function renderRevealed() {
 
   const judged = phase === 'judged';
   const result = $('result');
-  result.hidden = !judged;
   if (judged) {
     result.textContent = lastMatch ? '達成共識！' : '未達共識…';
     result.classList.toggle('is-match', lastMatch);
   }
 
-  $('judge-buttons').hidden = judged;
-  $('next-btn').hidden = !judged;
+  // 判定後，兩顆判定按鈕換成結果文字（同一個位置），主席的「下一題」在文字右邊
+  $('judge-slot').hidden = judged;
+  $('verdict').hidden = !judged;
   $('next-btn').textContent = targetReached ? '看會議紀錄' : '下一題';
   $('reveal-wait').textContent = judged ? '等待主席進到下一題…' : '等待主席判定…';
   showScreen('revealed');
@@ -349,10 +489,22 @@ $('submit-btn').addEventListener('click', () => {
   if (image.length > state.limits.maxDrawingLength) {
     return showNotice('圖太大了，請清除後簡化一點再送出', true);
   }
+  // 先讓瀏覽器解碼這張圖，等 server 回來顯示「已送出」時才不會閃一下空白
+  warmImage = new Image();
+  warmImage.src = image;
+  warmImage.decode?.().catch(() => {});
   sendAction('answer', { image });
 });
 
-$('reveal-btn').addEventListener('click', () => sendAction('reveal'));
+// 公開答案要長按 1.2 秒才會送出，避免主席誤觸，大家還沒看完的答案就被公開
+initHoldButton($('reveal-btn'), {
+  duration: 1200,
+  onConfirm: () => {
+    setRevealLabel('已公開 ✓');
+    sendAction('reveal');
+  },
+  onReset: renderRevealLabel,
+});
 $('match-btn').addEventListener('click', () => sendAction('judge', { match: true }));
 $('nomatch-btn').addEventListener('click', () => sendAction('judge', { match: false }));
 $('next-btn').addEventListener('click', () => sendAction('next'));

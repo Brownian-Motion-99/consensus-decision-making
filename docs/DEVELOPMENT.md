@@ -88,6 +88,8 @@ npm test
 | `audio/wrong.mp3` | 未達共識 | ["Wrong Buzzer"](https://freesound.org/people/KevinVG207/sounds/331912/) by KevinVG207 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `audio/congrats.mp3` | 會議紀錄（結算） | ["Party Pack, Horn Coil 01, Long, 01.wav"](https://freesound.org/people/InspectorJ/sounds/484267/) by InspectorJ ([www.jshaw.co.uk](https://www.jshaw.co.uk)) of Freesound.org | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 
+另外，連線中的輪播動畫、啟動頁轉場、換頁簾幕、送出答案的轉場、公開答案的轉場、結算的彩紙和大廳的進場動畫用 [GSAP](https://gsap.com/)（npm 套件 `gsap`），依照它的 [Standard "no charge" license](https://gsap.com/standard-license) 使用，不適用本專案的 LICENSE。server 從 `node_modules/gsap/dist/gsap.min.js` 以 `/vendor/gsap.min.js` 提供，不從 CDN 載入，區網沒有外網時也能用；本 repo 不含它的檔案，需要先 `npm install`。
+
 三個檔案都是 Freesound 的 preview（低音質 mp3），檔案本身沒有修改；播放時的響度正規化是在瀏覽器裡即時計算的。`congrats.mp3` 是 CC BY 4.0，**散布時一定要保留上面的作者標示**。
 
 換音效時要同步更新這張表。Freesound 的音效常見三種授權：CC0（不用標示）、CC BY（要標示作者和出處）、CC BY-NC（要標示，且不能商用）。

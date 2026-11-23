@@ -24,12 +24,12 @@
 
     <!-- 連線中 -->
     <section class="screen" data-screen="connecting">
-      <div class="heartbeat" role="status">
-        <span class="heartbeat-ring" aria-hidden="true"></span>
-        <span class="heartbeat-ring" aria-hidden="true"></span>
-        <span class="heartbeat-ring" aria-hidden="true"></span>
-        <span class="heartbeat-ring" aria-hidden="true"></span>
-        <span class="heartbeat-text">連線中…</span>
+      <!-- 多語的「連線中」由 greeting.js 輪播，螢幕閱讀器讀隱藏的文字 -->
+      <div class="greeting" id="connecting-greeting" role="status">
+        <span class="visually-hidden">連線中…</span>
+        <span class="greeting-box" aria-hidden="true"></span>
+        <span class="greeting-dot" aria-hidden="true"></span>
+        <span class="greeting-measure" aria-hidden="true"></span>
       </div>
     </section>
 
@@ -119,7 +119,10 @@
         <ul class="players" id="answer-players"></ul>
       </div>
       <div class="host-only">
-        <button id="reveal-btn" class="btn btn-primary">公開答案</button>
+        <button id="reveal-btn" class="btn btn-primary hold-btn">
+          <span id="reveal-label">公開答案</span>
+          <span class="hold-fill" id="reveal-fill" aria-hidden="true" data-label="公開答案"></span>
+        </button>
       </div>
     </section>
 
@@ -129,13 +132,18 @@
       <h2 class="question" id="reveal-question"></h2>
       <ul class="answers" id="reveal-answers"></ul>
       <p class="tally" id="tally"></p>
-      <div class="result" id="result" hidden></div>
-      <div class="host-only">
-        <div class="row" id="judge-buttons">
-          <button id="match-btn" class="btn btn-primary">達成共識</button>
-          <button id="nomatch-btn" class="btn">未達共識</button>
+      <!-- 判定前：主席的兩顆判定按鈕。判定後：同一個位置換成結果文字，主席的「下一題」在文字下面 -->
+      <div class="judge-area">
+        <div class="host-only" id="judge-slot">
+          <div class="row" id="judge-buttons">
+            <button id="match-btn" class="btn btn-primary">達成共識</button>
+            <button id="nomatch-btn" class="btn">未達共識</button>
+          </div>
         </div>
-        <button id="next-btn" class="btn btn-primary" hidden></button>
+        <div class="verdict" id="verdict" hidden>
+          <div class="result" id="result"></div>
+          <button id="next-btn" class="btn btn-primary host-only"></button>
+        </div>
       </div>
       <p class="guest-only muted" id="reveal-wait"></p>
     </section>
@@ -172,6 +180,17 @@
     </section>
   </main>
 
+  <!-- 公開答案時展開的白色圓，由 iris.js 播放 -->
+  <div class="iris" id="iris" hidden aria-hidden="true"></div>
+
+  <!-- 結算的彩紙：由 confetti.js 在這一層噴紙片 -->
+  <div class="confetti" id="confetti" aria-hidden="true"></div>
+
+  <!-- 換頁簾幕：三片直條，由 curtain.js 播放 -->
+  <div class="curtain" id="curtain" hidden aria-hidden="true"><span></span><span></span><span></span></div>
+
+  <script src="/vendor/gsap.min.js"></script>
+  <script src="/vendor/Physics2DPlugin.min.js"></script>
   <script src="/app.js" type="module"></script>
 </body>
 </html>

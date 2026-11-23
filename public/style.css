@@ -11,6 +11,9 @@
   --color-match: #28bd69; /* 「一致！」：原 #2E8B57 hsl(146 50% 36%) 調高彩度和明度，hsl(146 65% 45%) */
   --color-error: #c0392b;
   --color-done: #2e8b57;
+  --color-curtain: #2f4858; /* 換頁簾幕：Charcoal Blue */
+  --color-iris: #ffffff; /* 公開答案時展開的圓 */
+  --color-card-ink: #2f4858; /* 公開答案的相片卡上的暱稱：Charcoal Blue */
   --color-board: #ffffff;
   --color-frame: #86bbd8; /* 白板的外框 */
   --color-board-hint: #808080; /* 白板上提示可以寫字的鉛筆 */
@@ -25,7 +28,7 @@
   --font-size-question: 1.5rem;
   --font-size-result: 2.5rem;
   --font-size-title: clamp(1.75rem, 10vw, 4rem); /* 首頁標題：第二行 7 個字，10vw 時約佔畫面寬度的 77% */
-  --font-size-connecting: calc(100vw / 12); /* 「連線中…」約 4 個字寬，1/12 視窗寬時整行佔畫面橫向中間的 1/3 */
+  --font-size-connecting: calc(100vw / 12); /* 連線中的文字：最長的「Connessione」11 個字母，1/12 視窗寬時約佔畫面寬度的 1/2 */
   --font-size-room-code: 1.5rem; /* 大廳的會議編號那一行 */
   --font-size-small-btn: 0.9rem; /* 大廳的複製按鈕 */
 
@@ -126,13 +129,61 @@ input::placeholder { color: var(--color-input-placeholder); }
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   cursor: pointer;
+  transition: filter 0.1s ease-out;
 }
 .btn-primary {
   color: var(--color-primary-text);
   background: var(--color-primary);
   border-color: var(--color-primary);
 }
+/* 按下去時明度微微降低 */
+.btn:active:not(:disabled) { filter: brightness(0.9); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 長按確認的按鈕（公開答案）：平常是黃底白字，按住時白底黃字從左往右等速蓋過去，按鈕微微縮小；計時寫在 hold-button.js。
+   蓋過去的那一層自己帶一份黃色的文字（data-label），用 clip-path 一起裁切，所以交界兩邊的字都看得清楚 */
+.hold-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  user-select: none;
+  transition: transform 0.15s ease-out, filter 0.1s ease-out;
+}
+.hold-fill {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  background: var(--color-primary-text);
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 0.25s ease-out; /* 中途放開：快速退回 */
+  pointer-events: none;
+}
+.hold-fill::after { content: attr(data-label); }
+.hold-btn.is-holding { transform: scale(0.96); }
+/* 這顆按鈕按住時已經有縮小和變色，不再疊上一般按鈕的「按下去變暗」，否則白底會變灰 */
+.hold-btn:active:not(:disabled) { filter: none; }
+.hold-btn.is-holding .hold-fill {
+  clip-path: inset(0 0 0 0);
+  transition: clip-path var(--hold-duration, 1.2s) linear;
+}
+.hold-btn.is-confirmed { animation: hold-pop 0.35s ease-out; }
+.hold-btn.is-confirmed .hold-fill { clip-path: inset(0 0 0 0); transition: none; }
+@keyframes hold-pop {
+  0% { transform: scale(0.96); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+/* 系統設定減少動態時，蓋過去的那一層還是要有（它是進度），但不縮小也不彈 */
+@media (prefers-reduced-motion: reduce) {
+  .hold-btn.is-holding { transform: none; }
+  .hold-btn.is-confirmed { animation: none; }
+}
 a.btn {
   display: block;
   text-align: center;
@@ -248,85 +299,142 @@ body.is-host .guest-only { display: none; }
   pointer-events: none; /* 點擊直接穿透到白板 */
 }
 
+/* 公開的答案：每張是一張帶寬邊框的相片卡，欄數依人數由 app.js 設在 --cols。
+   展開前先疊在中央的動作寫在 photo-stack.js */
 .answers {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
   gap: var(--space-3);
 }
-.answers li { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; /* 長暱稱不要撐寬格子 */ }
-.answer-name { color: var(--color-muted); font-size: 0.9rem; }
-
-.tally { margin: var(--space-3) 0 0; text-align: center; color: var(--color-muted); }
-
-.result {
-  margin: var(--space-4) 0;
-  text-align: center;
-  font-size: var(--font-size-result);
-  font-weight: 700;
-  color: var(--color-muted);
+.answers li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0; /* 長暱稱不要撐寬格子 */
+  padding: var(--space-2);
+  background: var(--color-board);
+  border-radius: 6px;
+  box-shadow: 0 3px 12px rgb(0 0 0 / 0.3);
 }
-.result.is-match { color: var(--color-match); }
+.answers.is-stacked { cursor: pointer; }
+.answer-name { color: var(--color-card-ink); font-size: 0.9rem; font-weight: 600; text-align: center; }
 
-.score { margin-top: 0; font-size: var(--font-size-question); font-weight: 700; }
-
-/* 連線中：心跳放大。文字「咚咚」跳兩下，每一下從中心擴散兩圈波紋，1.3 秒一拍 */
-.heartbeat {
-  --beat: 1.3s;
-  --beat-second: 0.21s; /* 第二下「咚」開始放大的時間，對齊 heartbeat-text 的 16%（1.3s × 16%） */
-  /* 蓋住整個視窗，文字才會在畫面正中央，不受 container 的間距影響 */
+/* 結算的彩紙：蓋住整個畫面但不擋點擊，紙片從下方噴出，動作寫在 confetti.js */
+.confetti {
   position: fixed;
   inset: 0;
-  display: grid;
-  place-items: center;
+  z-index: 25;
   overflow: hidden;
   pointer-events: none;
 }
-.heartbeat-text {
-  position: relative;
+.confetti-piece {
+  position: absolute;
+  display: block;
+  border-radius: 2px;
+}
+
+/* 圓形展開轉場：白色蓋住整個畫面，同時擋住點擊；動作寫在 iris.js */
+.iris {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--color-iris);
+}
+
+.tally { margin: var(--space-3) 0 0; text-align: center; color: var(--color-muted); }
+
+/* 判定結果：結果文字和判定前的兩顆按鈕在同一個位置，上面的答案不會動；主席的「下一題」放在文字下面。
+   主席看到的區塊事先留好文字加按鈕的高度，判定前後整個畫面不會重新置中而上下跳動 */
+.judge-area { margin-top: var(--space-4); }
+body.is-host .judge-area { min-height: calc(7.2rem + var(--space-3)); }
+.judge-area .host-only { margin-top: 0; }
+.verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+.result {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 3.6rem; /* 和一顆按鈕一樣高，文字停在原本按鈕的位置 */
+  white-space: nowrap;
+  font-size: min(var(--font-size-result), 9vw); /* 窄螢幕上五個字也放得下 */
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-muted);
+}
+.verdict .btn { width: min(100%, 14rem); }
+.result.is-match { color: var(--color-match); }
+
+.score {
+  margin-top: 0;
+  font-size: var(--font-size-question);
+  font-weight: 700;
+  text-align: center; /* 和下面的按鈕對齊 */
+  text-wrap: balance; /* 換行時兩行長度接近，不要把「7」孤零零留在上一行 */
+}
+
+/* 連線中：多語輪播。切換的時間和動作寫在 greeting.js */
+.greeting {
+  /* 蓋住整個視窗，文字才會在畫面正中央，不受 container 的間距影響 */
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   font-size: var(--font-size-connecting);
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.3;
   white-space: nowrap;
+  pointer-events: none;
+}
+/* 容器寬度由 greeting.js 縮放到目前的詞，詞靠左疊在裡面，後面的圓點才會跟著移動 */
+.greeting-box {
+  position: relative;
+  height: 1.3em;
   color: var(--color-primary);
-  animation: heartbeat-text var(--beat) ease-in-out infinite;
 }
-.heartbeat-ring {
-  /* 波紋跟著文字大小縮放：起點是文字寬度的一半，最大約畫面寬度的一半到三分之二 */
+.greeting-word {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: calc(100vw / 3);
-  height: calc(100vw / 3);
-  margin: calc(100vw / -6) 0 0 calc(100vw / -6);
-  border: 3px solid var(--color-frame);
+  left: 0;
+  top: 0;
+}
+.greeting-dot {
+  width: 0.16em;
+  height: 0.16em;
+  margin: 0.8em 0 0 0.12em; /* 上方的間距把圓點壓到字的底線附近 */
   border-radius: 50%;
-  opacity: 0;
-  animation: heartbeat-ring var(--beat) cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+  background: var(--color-frame);
 }
-/* 每一下兩圈：同時出發，一圈小一圈大 */
-.heartbeat-ring:nth-child(1) { --ring-scale: 1.4; }
-.heartbeat-ring:nth-child(2) { --ring-scale: 2; border-width: 2px; }
-.heartbeat-ring:nth-child(3) { --ring-scale: 1.4; animation-delay: var(--beat-second); }
-.heartbeat-ring:nth-child(4) { --ring-scale: 2; border-width: 2px; animation-delay: var(--beat-second); }
-
-@keyframes heartbeat-text {
-  0%, 40%, 100% { transform: scale(1); }
-  8% { transform: scale(1.2); }
-  16% { transform: scale(1); }
-  26% { transform: scale(1.15); }
-}
-@keyframes heartbeat-ring {
-  0% { transform: scale(0.5); opacity: 0.8; }
-  60%, 100% { transform: scale(var(--ring-scale)); opacity: 0; }
+.greeting-measure {
+  position: absolute;
+  visibility: hidden;
 }
 
-/* 系統設定減少動態時，只留下文字的淡入淡出 */
-@media (prefers-reduced-motion: reduce) {
-  .heartbeat-ring { display: none; }
-  .heartbeat-text { animation: heartbeat-fade 2s ease-in-out infinite; }
-  @keyframes heartbeat-fade {
-    50% { opacity: 0.5; }
-  }
+/* 只給螢幕閱讀器讀的文字 */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 換頁簾幕：三片直條蓋住整個畫面，轉場期間也擋住點擊；動作寫在 curtain.js */
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  overflow: hidden;
+}
+.curtain span {
+  flex: 1;
+  margin-right: -1px; /* 三片之間不留縫 */
+  background: var(--color-curtain);
 }
 
 /* 首頁：logo 區塊佔畫面垂直方向中間的 1/2，房號和按鈕放在下面 */
