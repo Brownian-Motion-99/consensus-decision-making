@@ -70,6 +70,22 @@ npm test
 - `questions.json`：題庫
 - `docs/`：給 Claude Code 讀的文件。`PLAN.md` 是產品設計與架構規劃，`PROGRESS.md` 是工作進度，`DEVELOPMENT.md` 是本文件
 
+### 錄製 README 的 demo 動畫
+
+`docs/media/` 的 GIF 是用預覽頁（劇本模式）錄的，做法：
+
+1. `npm start`，用瀏覽器開 `/?preview=flow&as=host`（連線中那段用 `/?preview=connecting`）。
+2. 把 GSAP 的時間凍結，之後由腳本一格一格推進，每推進 0.05 秒（20fps）截一張圖，動畫速度才會準確，不受截圖速度影響：
+   ```js
+   gsap.ticker.remove(gsap.updateRoot);          // 停掉自動前進
+   const base = gsap.ticker.time;
+   window.__step = (dt) => gsap.updateRoot(base + (window.__t = (window.__t ?? 0) + dt));
+   ```
+3. 切換畫面：劇本模式用面板的下拉選單；連線中 → 首頁用 `window.__previewApp.showScreen('home', { splash: true })`（預覽頁提供的開發用 hook）。切換之後先 `__step(0.0001)` 再截圖，不然第一格會看到還沒渲染的轉場。
+4. 用 ffmpeg 裁成中間 960px、縮到寬 720，再轉成 GIF（`palettegen` / `paletteuse`），每段控制在 1MB 以內。
+
+限制：只有 GSAP 的動畫能這樣凍結；長按按鈕的填色是 CSS transition，用的是真實時間，錄不到。
+
 ## 授權
 
 本專案**不是開源軟體**，完整條款見 [LICENSE](../LICENSE)。重點：

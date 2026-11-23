@@ -24,6 +24,16 @@
 > - 重新整理或斷線後重新打開連結就能回到會議室。
 > - 主席離開時，會從其他人中隨機挑一位當新主席。
 
+## 動態展示
+
+![連線中到首頁](docs/media/01-connecting-to-home.gif)
+
+![開始會議到送出答案](docs/media/02-start-and-submit.gif)
+
+![公開答案](docs/media/03-reveal.gif)
+
+![結算](docs/media/04-finale.gif)
+
 ## 架設伺服器
 
 ### 準備工作

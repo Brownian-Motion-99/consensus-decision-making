@@ -334,6 +334,7 @@ export function startPreview(key, role, app) {
 
   const preview = PREVIEWS[key];
   if (!preview) return false;
+  window.__previewApp = app; // 開發用：錄 demo 動畫時可以從外面手動切換畫面
   if (preview.screen) {
     app.showScreen(preview.screen);
     if (preview.then) setTimeout(() => app.showScreen(preview.then, { splash: true }), preview.delay);
