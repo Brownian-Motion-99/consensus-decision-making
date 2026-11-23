@@ -1,6 +1,6 @@
 # 本次會議我們採取共識決：工作進度
 
-最後更新：2026-11-23（commit `57817ff`）
+最後更新：2026-11-23（commit `3bc4560`）
 
 ## 現況
 
@@ -59,6 +59,7 @@
 - **文件分工**：`README.md` 寫給一般玩家（怎麼玩、架設步驟、區網與外網模式、常見問題），假設架設的人會用 git 和終端機；開發者用的啟動模式、環境變數、sandbox 細節、預覽頁、測試和檔案說明移到 `docs/DEVELOPMENT.md`。
 - **授權**：自訂的個人使用條款（`LICENSE`，中英對照，以中文為準）：可以為個人、非商業目的使用、自架和自己修改；不能散布本軟體或修改版、不能商用。重點和第三方素材表放在 `docs/DEVELOPMENT.md` 的「授權」。
 - **音效出處**：三個音效都是 Freesound 的 preview。`correct.mp3`（StavSounds #546084）、`wrong.mp3`（KevinVG207 #331912）是 CC0；`congrats.mp3`（InspectorJ #484267）是 CC BY 4.0，必須標示作者。標示寫在 `docs/DEVELOPMENT.md` 的「第三方素材」。
+- **公開 repo**：https://github.com/Brownian-Motion-99/consensus-decision-making（public，預設分支 `master`）。
 
 ### 外網連線
 
@@ -194,3 +195,4 @@ public/tweaks.js     調整面板
 | `cbde1c4` | 11-21 | 新增一題咖哩題 |
 | `4af45ed` | 11-23 | 題庫增修（刪 2 題、加 10 題） |
 | `57817ff` | 11-23 | README 改成玩家指引、開發內容移到 docs/DEVELOPMENT.md，加上個人使用授權 |
+| `3bc4560` | 11-23 | 標示 Freesound 音效出處；repo 公開到 GitHub |

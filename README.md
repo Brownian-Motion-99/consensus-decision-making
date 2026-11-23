@@ -29,7 +29,7 @@
 需要 [Node.js](https://nodejs.org/) v20 以上。
 
 ```sh
-git clone <repository URL>
+git clone https://github.com/Brownian-Motion-99/consensus-decision-making.git
 cd consensus-decision-making
 npm install
 ```
