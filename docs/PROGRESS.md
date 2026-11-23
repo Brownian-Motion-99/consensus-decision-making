@@ -174,6 +174,8 @@ public/tweaks.js     調整面板
 
 - 部署平台：建議 Render、Railway、Fly.io，或 Cloudflare Workers 搭配 Durable Objects。GitHub Actions 只能做 CI 和自動部署，不能當 server。
 - 依實際流量調整房間上限和限流數字（基本版的限流已完成，見「外網連線」）。
+- **動態效果的授權**：Hannah's Motion Library 沒有寫授權條款，只寫了「僅供參考學習」，而且 #001–075 號效果的名稱和描述來自 Threads 上的 @ai_yunon_ai 和 @ai_tjb。上線前要先寫信問 Hannah 能不能用；不行的話，`docs/DEVELOPMENT.md` 裡逐字收錄的提示詞改成只列效果名稱和連結。
+- **音效自己重新錄製**：換掉 `audio/` 裡取自 Freesound 的三個音效，同步更新 `docs/DEVELOPMENT.md` 的出處表和 LICENSE 的「第三方素材」段落。
 
 ## 版本紀錄
 
