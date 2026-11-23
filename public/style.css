@@ -27,7 +27,7 @@
   --font-size-base: 16px;
   --font-size-question: 1.5rem;
   --font-size-result: 2.5rem;
-  --font-size-title: clamp(1.75rem, 10vw, 4rem); /* 首頁標題：第二行 7 個字，10vw 時約佔畫面寬度的 77% */
+  --font-size-title: clamp(2.25rem, 14vw, 5rem); /* 首頁標題：最長一行 4 個字，14vw 時約佔畫面寬度的 56% */
   --font-size-connecting: calc(100vw / 12); /* 連線中的文字：最長的「Connessione」11 個字母，1/12 視窗寬時約佔畫面寬度的 1/2 */
   --font-size-room-code: 1.5rem; /* 大廳的會議編號那一行 */
   --font-size-small-btn: 0.9rem; /* 大廳的複製按鈕 */
@@ -449,14 +449,25 @@ body.is-host .judge-area { min-height: calc(7.2rem + var(--space-3)); }
   height: 50dvh;
   margin: 25vh 0 var(--space-4);
   margin-top: 25dvh;
-  border: 2px dashed var(--color-frame);
-  border-radius: var(--radius);
 }
 .logo-title {
+  display: inline-block; /* 寬度剛好包住最長的一行，底下的細線才會和文字一樣寬 */
   margin: 0;
   font-size: var(--font-size-title);
-  line-height: 1.3;
-  text-align: center;
+  line-height: 1.25;
+  text-align: left;
   color: var(--color-primary-text);
   letter-spacing: 0.1em;
+}
+/* 逐行揭示：每一行是一層遮罩，裡面的字從遮罩下方翻上來；動作寫在 title-reveal.js */
+.logo-title .line { display: block; overflow: hidden; }
+.logo-title .line-inner { display: inline-block; transform-origin: 0 100%; }
+.logo-title .is-accent { color: var(--color-primary); }
+.title-underline {
+  display: block;
+  height: 4px;
+  margin-top: var(--space-3);
+  background: var(--color-primary);
+  border-radius: 2px;
+  transform-origin: left;
 }

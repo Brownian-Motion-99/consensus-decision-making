@@ -34,6 +34,7 @@ const STATIC_FILES = {
   '/board.js': ['public/board.js', 'text/javascript; charset=utf-8'],
   '/sounds.js': ['public/sounds.js', 'text/javascript; charset=utf-8'],
   '/fade-up.js': ['public/fade-up.js', 'text/javascript; charset=utf-8'],
+  '/title-reveal.js': ['public/title-reveal.js', 'text/javascript; charset=utf-8'],
   '/confetti.js': ['public/confetti.js', 'text/javascript; charset=utf-8'],
   '/iris.js': ['public/iris.js', 'text/javascript; charset=utf-8'],
   '/photo-stack.js': ['public/photo-stack.js', 'text/javascript; charset=utf-8'],

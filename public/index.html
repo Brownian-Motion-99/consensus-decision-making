@@ -35,10 +35,14 @@
 
     <!-- 首頁：開房間或輸入房號 -->
     <section class="screen" data-screen="home" hidden>
-      <!-- 之後放 logo 的位置 -->
+      <!-- 之後放 logo 的位置：目前用文字標題代替，由 title-reveal.js 逐行揭示。每一行包一層 overflow:hidden 當遮罩 -->
       <div class="logo">
-        <!-- 名稱太長，手機上一行放不下，固定拆成兩行 -->
-        <h1 class="logo-title">本次會議<br>我們採取共識決</h1>
+        <h1 class="logo-title" id="home-title">
+          <span class="line"><span class="line-inner">本次會議</span></span>
+          <span class="line"><span class="line-inner">我們採取</span></span>
+          <span class="line"><span class="line-inner is-accent">共識決</span></span>
+          <span class="title-underline" aria-hidden="true"></span>
+        </h1>
       </div>
       <form id="enter-form" class="stack">
         <input id="code-input" class="code-input" autocomplete="off" autocapitalize="characters"

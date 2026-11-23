@@ -12,9 +12,11 @@ import { initHoldButton } from './hold-button.js';
 import { playIris } from './iris.js';
 import { stackAnswers } from './photo-stack.js';
 import { playConfetti } from './confetti.js';
+import { createTitleReveal } from './title-reveal.js';
 
 const $ = (id) => document.getElementById(id);
 createGreeting($('connecting-greeting'));
+const homeTitle = createTitleReveal($('home-title'));
 const board = createBoard($('board'), {
   fontFamily: getComputedStyle(document.body).fontFamily,
   // SVG 沒有 hidden 屬性可以直接設，要改 attribute
@@ -204,6 +206,9 @@ function switchScreen(name, { splash = false } = {}) {
     // 轉場時，連線中的字還要飛出去，先留著，由 splash.js 播完後隱藏
     el.hidden = el.dataset.screen !== name && !(splash && el.dataset.screen === 'connecting');
   }
+  // 首頁的標題只要畫面還在首頁就一直重複；從連線中進來時，等啟動轉場把標題區浮上來再開始
+  if (name === 'home') homeTitle.start({ delay: splash ? 0.8 : 0 });
+  else homeTitle.stop();
   setZoomLocked(name === 'answering');
 }
 
