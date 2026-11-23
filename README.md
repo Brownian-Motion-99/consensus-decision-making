@@ -1,66 +1,93 @@
-# 本次會議我們採取共識決（demo）
+# 本次會議我們採取共識決（Demo）
 
-2–8 人一起玩的派對遊戲（同一個區網，或透過 Cloudflare Tunnel 從外網連線）：大家對同一題自由作答，由主持人判定答案是否一致。畫面上的用語模仿開會（主持人叫「主席」、一致叫「達成共識」等），對照表見 [docs/PLAN.md](docs/PLAN.md)。
+日本網頁派對遊戲《一致するまでおわれまテン》的台灣版本。因為種種因素目前停留在 demo 階段，技術條件允許的可以 clone 後自架伺服器與朋友同樂，未來有機會的話會正式上線讓更多人可以遊玩。
 
-## 啟動
+**遊玩人數**：2–8 人。
+**玩法簡介**：每一題大家各自寫下答案，全員一致才算「達成共識」，通過指定數量的決議才能散會。
+**支援平台**：需要一位玩家架設伺服器，其他玩家使用瀏覽器（手機與電腦）連線即可遊玩。
+
+> 開發人員請見 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+
+## 遊戲流程
+
+1. **召開會議**：主席在首頁按「召開會議」，取好暱稱後會得到 4 碼的會議編號。
+2. **邀請與會者**：主席透過「複製連結」或「複製會議編號」邀請其他玩家加入。
+3. **設定決議數量**：主席決定要通過幾項決議才能散會（預設 3），人數到齊（至少 2 人）後開始會議。
+4. **作答**：在白板上手寫、畫畫或打字，寫好後送出答案。
+5. **公開與判定**：全員送出後，由主席公開答案，並由主席判定「達成共識」或「未達共識」。
+6. **散會**：達成共識的次數到達目標後進入結算畫面，公布會議記錄。
+
+> - 可在遊戲中途加入。
+> - 題目進行中進來的人會被指派為列席成員，下一題開始時再一起作答。
+> - 重新整理或斷線後重新打開連結就能回到會議室。
+> - 主席離開時，會從其他人中隨機挑一位當新主席。
+
+## 架設伺服器
+
+### 準備工作
+
+需要 [Node.js](https://nodejs.org/) v20 以上。
 
 ```sh
+git clone <repository URL>
+cd consensus-decision-making
 npm install
-npm start          # 只接受本機連線，預設 port 3000，可用 PORT=xxxx npm start 修改
-npm run start:lan  # 開放同一個區網的裝置連進來
 ```
 
-`npm start` 只聽 `127.0.0.1`，外部裝置連不進來，適合單機改畫面。要用手機玩時改用 `npm run start:lan`，終端機會印出區網網址和 QR code。主持人電腦和玩家手機要連同一個 Wi-Fi，用瀏覽器開啟網址。
+準備工作完成之後，進入專案資料夾，依照下面的情況啟動。
 
-在首頁按「開新房間」，再取暱稱加入，開房的人就是主持人。主持人在大廳可以複製房號或連結（網址會帶 `?room=房號`）傳給其他人，其他人開連結或在首頁輸入 4 碼房號，進房後再取暱稱。一台 server 可以同時開多間房（上限 100 間），房間只能靠房號進入。遊戲進行中也能加入，題目進行中加入的人先列席，下一題開始時才一起作答；重新整理也是用這個方式回到房間。最後一個人離開 30 秒後，或連續 10 分鐘沒有人取暱稱加入時，房間會自動收掉。
+### 區網模式
 
-## 外網連線（Docker ＋ Cloudflare Tunnel）
+適合聚會時大家在同一個地方。開伺服器的電腦和所有玩家的手機要連**同一個 Wi-Fi**。
 
-不同網路的朋友也想一起玩，又不想部署到雲端時使用。需要先安裝並開啟 Docker Desktop。
+Mac：
 
 ```sh
-npm run tunnel       # build 並啟動容器，印出 https://xxx.trycloudflare.com 網址和 QR code
-npm run tunnel:down  # 關閉，網址會立刻失效
+npm run start:lan
 ```
 
-- 不需要 Cloudflare 帳號，也不用設定 router。但每次啟動網址都會不同，不玩的時候記得關掉。
-- 拿到網址的人都連得進來，請只傳給要一起玩的人。
-- 改了程式碼之後重跑 `npm run tunnel` 就會重新 build。
+Windows（PowerShell）：
 
-遊戲 server 跑在 sandbox 容器裡，跟本機隔開：
-
-- 容器放在 `internal` 網路上，不能上網，本機也沒有開任何 port，唯一的入口是 cloudflared 容器。
-- 不掛載任何本機資料夾，檔案系統唯讀，用非 root 的 `node` 使用者執行，拿掉所有 Linux 特權。
-- 限制記憶體（256 MB）、CPU 和 process 數量。
-- 房間上限降為 20 間。每個 IP 最多同時 20 條連線，每分鐘最多開 5 間房；每條連線每秒最多 20 則訊息。
-
-設定都在 `docker-compose.yml`。server 用到的環境變數：`HOST`（監聽位址）、`TRUST_PROXY=1`（信任 Cloudflare 帶的 `CF-Connecting-IP`，只有在 tunnel 後面才能開）、`MAX_ROOMS`。
-
-## 畫面預覽（細修版面用）
-
-啟動 server 後開啟：
-
-- `http://localhost:3000/preview.html`：手機尺寸，並排顯示所有畫面，可以切換裝置、縮放和身分
-- `http://localhost:3000/preview-desktop.html`：電腦 16:9（1280×720 到 1920×1080），以原解析度渲染後縮小顯示
-
-單一畫面可以直接開 `/?preview=<名稱>&as=<host|guest>`，例如 `/?preview=revealed&as=guest`。
-劇本模式 `/?preview=flow&as=<host|guest>` 會在左下角顯示控制面板，用 ◀ ▶（或鍵盤 ← →）依序切換狀態，也可以自動播放，用來看狀態切換時的動畫和音效。
-總覽頁右上角的「調整面板」可以用滑桿和色票即時調整 `style.css` 裡 `:root` 的變數，改動會同步套用到所有預覽畫面（包括另開的分頁），按「複製改動」可以拿到要寫回 CSS 的內容。改動只存在瀏覽器的 localStorage，不會改到檔案。
-預覽使用假資料、不會連線，按鈕也不會真的送出。要新增預覽，編輯 `public/preview.js` 的 `PREVIEWS`。
-
-## 測試
-
-```sh
-npm test
+```powershell
+$env:LAN=1; npm start
 ```
 
-## 檔案
+玩家掃描終端機印出的 QR Code 或輸入網址（例如 `http://192.168.1.23:3000`）後即可進入遊戲。
 
-- `src/game.js`：遊戲狀態機（唯一的權威狀態）
-- `src/rooms.js`：多房間。`RoomSession` 是一間房（遊戲狀態＋連線＋廣播），`RoomRegistry` 用房號管理所有房間
-- `server.js`：HTTP 靜態檔案 + WebSocket，連線先開房或輸入房號，之後的操作交給所在的房間
-- `src/limits.js`：限流（開房頻率、訊息頻率、同時連線數）
-- `Dockerfile`、`docker-compose.yml`、`scripts/tunnel-url.js`：外網連線用的容器與 tunnel
-- `public/`：前端骨架，樣式變數集中在 `style.css` 的 `:root`
-- `questions.json`：題庫
-- `docs/`：給 Claude Code 讀的文件。`PLAN.md` 是產品設計與架構規劃，`PROGRESS.md` 是工作進度
+- Mac 若跳出「是否允許接受連入的網路連線」，請按「允許」。
+- Windows 如果跳出防火牆詢問，請允許「私人網路」。
+
+### 外網模式
+
+適合遠端一起玩。透過 Cloudflare Tunnel 連接至本機伺服器，不需要 Cloudflare 帳號，也不需額外設定路由器。為避免本機資料外洩，外網模式下伺服器運行在獨立的 Docker 容器中，因此需要先安裝 Docker Desktop：
+
+1. 到 [docker.com](https://www.docker.com/products/docker-desktop/) 下載並安裝 Docker Desktop。
+2. 打開 Docker Desktop，等它顯示已經在執行。
+3. 在終端機輸入：
+
+   ```sh
+   npm run tunnel
+   ```
+
+   終端機會印出 `https://xxx.trycloudflare.com` 網址和 QR code，其他玩家可透過網址或 QR Code 加入遊戲。
+
+4. 遊戲結束後關閉伺服器：
+
+   ```sh
+   npm run tunnel:down
+   ```
+
+注意事項：
+
+- 請不要隨意將網址傳給陌生人。
+- 每次啟動網址都不一樣。
+- 關掉終端機視窗**不會**關掉伺服器，一定要執行 `npm run tunnel:down`。
+- 遊戲伺服器跑在隔離的 Docker 容器中。
+
+## FAQs
+
+**其他玩家打不開網址？**
+區網模式下，確認手機和電腦連的是同一個 Wi-Fi（手機不要用行動網路），並且有允許防火牆的連線。使用公共 Wi-Fi（咖啡廳、飯店）時建議改用外網模式。
+
+**外網模式下找不到 `docker`，或卡住不動？**
+確認 Docker Desktop 已經打開並在執行中。

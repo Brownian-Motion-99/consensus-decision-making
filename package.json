@@ -5,6 +5,7 @@
   "description": "本次會議我們採取共識決：多人派對遊戲 demo",
   "type": "module",
   "main": "server.js",
+  "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "start": "node server.js",
     "start:lan": "LAN=1 node server.js",

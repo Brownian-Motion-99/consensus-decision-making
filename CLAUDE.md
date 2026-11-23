@@ -5,7 +5,7 @@
 - 工作進度：@docs/PROGRESS.md
 - 產品規則與架構：@docs/PLAN.md
 
-啟動、測試和預覽頁的用法見 [README.md](README.md)。
+啟動、測試和預覽頁的用法見 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。README.md 是給一般玩家看的遊玩與架設指引。
 
 完成一個段落時，更新 `docs/PROGRESS.md` 的「已完成」「已知限制」「下一步」和版本紀錄。
 

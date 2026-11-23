@@ -1,0 +1,57 @@
+本次會議我們採取共識決 個人使用授權條款
+
+Copyright (c) 2026 Prcpltwfkwd-TW。保留所有權利，但以下明確允許的事項除外。
+
+一、允許的使用
+
+1. 你可以下載、安裝、執行本軟體，並架設伺服器和朋友一起遊玩，前提是用於個人、非商業目的。
+2. 你可以為了自己的使用而修改本軟體，但修改後的版本只能由你自己使用或架設。
+
+二、不允許的使用
+
+1. 不得散布本軟體或其修改版本，包括上傳、轉貼、打包後提供他人下載，或以其他方式提供原始碼或執行檔。
+   GitHub 服務條款允許的檢視與 fork 不在此限，但不得在 fork 中散布修改後的版本。
+2. 不得將本軟體或其修改版本用於商業目的，包括販售、收費遊玩、置入廣告，或作為收費服務的一部分。
+3. 不得移除或修改本授權條款與著作權聲明。
+
+三、第三方素材
+
+audio/ 資料夾裡的音效取自 Freesound，各自依照原作者標示的授權條款使用，不適用本條款。出處見 docs/DEVELOPMENT.md。
+
+四、免責聲明
+
+本軟體依「現狀」提供，不提供任何明示或默示的保證。因使用本軟體所產生的任何損害，作者不負任何責任。
+
+五、其他
+
+本條款的中文版本與英文版本如有出入，以中文版本為準。其他使用方式請聯絡作者取得許可。
+
+---
+
+Consensus Decision Making — Personal Use License
+
+Copyright (c) 2026 Prcpltwfkwd-TW. All rights reserved, except as expressly permitted below.
+
+1. Permitted use
+
+   1. You may download, install, and run this software, and host a server to play with friends, for personal, non-commercial purposes only.
+   2. You may modify this software for your own use. Modified versions may only be used or hosted by you.
+
+2. Prohibited use
+
+   1. You may not distribute this software or any modified version of it, including uploading, reposting, or packaging it for others to download, or otherwise providing its source code or binaries to others.
+      Viewing and forking as permitted by the GitHub Terms of Service are excepted, but you may not distribute modified versions through a fork.
+   2. You may not use this software or any modified version of it for commercial purposes, including selling it, charging for play, displaying advertisements, or offering it as part of a paid service.
+   3. You may not remove or alter this license or the copyright notice.
+
+3. Third-party assets
+
+   The sound effects in the audio/ directory come from Freesound and are used under the licenses chosen by their original authors. This license does not apply to them. See docs/DEVELOPMENT.md for credits.
+
+4. Disclaimer
+
+   This software is provided "as is", without warranty of any kind, express or implied. In no event shall the author be liable for any damages arising from the use of this software.
+
+5. Miscellaneous
+
+   If the Chinese and English versions of this license differ, the Chinese version prevails. For any other use, please contact the author for permission.

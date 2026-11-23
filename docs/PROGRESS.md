@@ -1,13 +1,13 @@
 # 本次會議我們採取共識決：工作進度
 
-最後更新：2026-11-21（commit `d39c0b9`）
+最後更新：2026-11-23（文件拆分，尚未 commit）
 
 ## 現況
 
 **基本骨架已完成，可以完整玩一局。** 遊戲名稱定為「本次會議我們採取共識決」（短名稱「共識決」），介面文案已改成開會的語氣。下一階段是加入品牌特色（logo、字型、插圖、動畫），需要大量美術工作，目前正在研究美術工作流程。
 
 - 產品規則與架構：見 [PLAN.md](PLAN.md)
-- 啟動、測試、預覽頁的用法：見 [README.md](../README.md)
+- 啟動、測試、預覽頁的用法：見 [DEVELOPMENT.md](DEVELOPMENT.md)；玩家指引：見 [README.md](../README.md)
 
 ## 已完成
 
@@ -56,6 +56,8 @@
 - **測試**：`npm test`，共 81 個，涵蓋遊戲狀態機（含中途加入與休會）、多房間與房間回收、限流、響度計算，以及啟動真的 server 從外面打的測試（`test/server.test.js`：物件繼承的屬性名稱當 type、超過大小上限的訊息、不合法的 frame、格式錯誤的網址，都不能讓 server 掛掉；不讀資料又一直送小訊息的連線會被斷線）。
 - **規格拷問 skill**：`/grill-spec`，放在全域的 `~/.claude/skills/grill-spec/`，所有專案都能用（不在這個 repo 裡）。做新功能之前，依照心智模型的六層一次問一題，使用者先回答，agent 才公開事先寫好的推薦，兩者不一樣的地方就拿來討論，最後把結論寫進規格。這個專案特有的設定（文件位置、身分和階段、拿來乘的數字、接縫）放在 `.claude/grill-spec.md`，skill 會先讀它。
 - **審查 agent**：`.claude/agents/spec-reviewer.md`，對照 PLAN.md 審查指定的 commit 範圍，要求每個發現和「沒有問題」都附上證據。
+- **文件分工**：`README.md` 寫給一般玩家（怎麼玩、架設步驟、區網與外網模式、常見問題），假設架設的人會用 git 和終端機；開發者用的啟動模式、環境變數、sandbox 細節、預覽頁、測試和檔案說明移到 `docs/DEVELOPMENT.md`。
+- **授權**：自訂的個人使用條款（`LICENSE`，中英對照，以中文為準）：可以為個人、非商業目的使用、自架和自己修改；不能散布本軟體或修改版、不能商用。重點和第三方素材表放在 `docs/DEVELOPMENT.md` 的「授權」。
 
 ### 外網連線
 
@@ -92,6 +94,9 @@ public/tweaks.js     調整面板
 - **置中有些微偏移**：內容上下置中時，底部為 Safari 工具列保留的 96px 也算在內，所以內容會比正中央略高（約 48px）。
 - **調整面板的部分字級只能打字修改**：首頁標題（`clamp()`）和「連線中…」（`calc()`）的值不是單純的 px／rem，面板會顯示成文字框，沒有滑桿。「連線中…」的波紋大小另外寫死成視窗寬度的 1/3，改字級時波紋不會跟著縮放。
 - **分享預覽只有文字**：還沒有 `og:image`。用 `localhost` 或區網網址分享時，LINE 抓不到預覽，要用 tunnel 的公開網址才會顯示。
+- **音效的出處和授權還沒補**：三個音效從 Freesound 下載，但沒有記下是哪幾個，檔案裡也沒有 metadata。要找回各音效的頁面，確認授權（CC0／CC BY／CC BY-NC）並填進 `docs/DEVELOPMENT.md` 的表格；如果是 CC BY 類，公開 repo 時就必須標示作者。
+- **Windows 不能直接用 `npm run start:lan`**：script 寫成 `LAN=1 node server.js`，Windows 的 npm 用 cmd 執行，不認得這種寫法。README 先請 Windows 玩家在 PowerShell 打 `$env:LAN=1; npm start`（沒有在 Windows 上實測）。要根治可以改成跨平台寫法（例如在 server.js 讀命令列參數）。
+- **架設門檻仍高**：玩家要自己裝 Node.js，外網模式還要裝 Docker Desktop、會用終端機。曾討論打包成雙擊啟動（Mac `.command`、Windows `.bat`，加上自動開啟的邀請頁和 GitHub Releases），因為測試量太大先暫停。
 - **tunnel 網址每次都會變**：quick tunnel 每次啟動都換網址。想要固定網址，可以在 Cloudflare 綁自己的網域（named tunnel），或改用 Tailscale Funnel。
 - **網路極慢的玩家仍可能被心跳斷線**：心跳已經放寬成連續 3 次沒回 pong（約 30 到 40 秒）才斷線。但下載速度每秒 100KB 以下的話，收一份 1.8MB 的快照就要 18 秒，排在前面的資料一多還是可能超過。之前審查實測每秒 100KB 在 35 秒後被斷線（當時只容忍 1 次）；放寬之後還沒重測，等多人實機測試時一起確認。
 - **走 tunnel 時，server 看不到玩家的網速**（待確認）：server 連線的另一端是 cloudflared，它讀得很快，資料改堆在 cloudflared 裡。所以「只收最新快照」和「排隊超過 1MB 斷線」在 tunnel 模式下可能作用有限。依照威脅模型，這兩個保護主要是防搗亂，影響不大；但上面的心跳問題在 tunnel 模式下一樣會發生。
