@@ -5,7 +5,7 @@ import { createBoard } from './board.js';
 import { loadSounds, playSound, stopSound } from './sounds.js';
 import { createGreeting } from './greeting.js';
 import { fadeUp } from './fade-up.js';
-import { playSplash } from './splash.js';
+import { playSplash, HOME_ENTER_DELAY } from './splash.js';
 import { playCurtain } from './curtain.js';
 import { captureSubmit, playSubmit } from './submit-transition.js';
 import { initHoldButton } from './hold-button.js';
@@ -206,8 +206,8 @@ function switchScreen(name, { splash = false } = {}) {
     // 轉場時，連線中的字還要飛出去，先留著，由 splash.js 播完後隱藏
     el.hidden = el.dataset.screen !== name && !(splash && el.dataset.screen === 'connecting');
   }
-  // 首頁的標題只要畫面還在首頁就一直重複；從連線中進來時，等啟動轉場把標題區浮上來再開始
-  if (name === 'home') homeTitle.start({ delay: splash ? 0.8 : 0 });
+  // 首頁的標題只要畫面還在首頁就一直重複；從連線中進來時，等連線中的字飛出去、首頁浮上來再開始
+  if (name === 'home') homeTitle.start({ delay: splash ? HOME_ENTER_DELAY : 0 });
   else homeTitle.stop();
   setZoomLocked(name === 'answering');
 }
